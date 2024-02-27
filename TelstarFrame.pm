@@ -72,11 +72,11 @@ sub write
 sub next_subpage
 {
     my $self = shift;
-    my %pid = $self->{pid};
+    my %pid = %{$self->{pid}};
 
     if ($pid{"frame-id"} eq "z")
     {
-        $pid{"page-no"} .= "0";
+        $pid{"page-no"} *= 10;
         $pid{"frame-id"} = "a";
     }
     else
