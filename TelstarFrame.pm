@@ -34,6 +34,13 @@ sub add_line
     push @{$self->{content}{lines}}, $line;
 }
 
+# How many lines do we currently have in the frame?
+sub count_lines
+{
+    my $self = shift;
+    scalar @{$self->{content}{lines}};
+}
+
 # Write the frame out to a file in an (optional) directory; defaults
 # to the current directory if not provided.  Filename will be based
 # on the frame number and subpage letter.
