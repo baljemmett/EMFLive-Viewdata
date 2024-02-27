@@ -35,7 +35,7 @@ sub split_page
 {
     my ($self, $frame) = @_;
 
-    $frame->add_line($self->{continues}) if defined $self->{continues};
+    $frame->add_line($self->{continues}) if $self->{continues};
     $frame->{"navmessage-select"} = $frame->{"pid"}{"frame-id"} eq "a" ? $self->{nav_first} : $self->{nav_mid};
 
     $frame->write();
@@ -43,7 +43,7 @@ sub split_page
     $self->{frame} = $frame;
     map { $frame->add_line($_) } @{$self->{header}};
 
-    $frame->add_line($self->{continued}) if defined $self->{continued};
+    $frame->add_line($self->{continued}) if $self->{continued};
 
     my $remaining = $self->{height} - $frame->count_lines();
 
@@ -65,7 +65,7 @@ sub paginate_text
     my $frame = $self->{frame};
     my $remaining = $self->{height} - $frame->count_lines();
 
-    my $orphan_threshold = defined $self->{continues} ? 2 : 1;
+    my $orphan_threshold = $self->{continues} ? 2 : 1;
 
     push @lines, "";
 
