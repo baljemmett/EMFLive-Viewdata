@@ -170,6 +170,12 @@ sub new_page
     $self->split_page($self->{frame});
 }
 
+sub frame
+{
+    my ($self) = @_;
+    $self->{frame};
+}
+
 sub finish
 {
     my ($self) = @_;
