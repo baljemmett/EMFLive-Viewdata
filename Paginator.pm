@@ -144,4 +144,26 @@ LAYOUT:
     $frame->write();
 }
 
+sub has_room_for
+{
+    my ($self, @text) = @_;
+    my $remaining = $self->{height} - $self->{frame}->count_lines();
+
+    $remaining >= @text;
+}
+
+sub add_text_block
+{
+    my ($self, @text) = @_;
+
+    map { $self->{frame}->add_line($_); } @text;
+}
+
+sub new_page
+{
+    my ($self) = @_;
+
+    $self->split_page($self->{frame});
+}
+
 1;
