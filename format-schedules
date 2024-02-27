@@ -1,0 +1,303 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use List::Util qw(min max);
+use JSON::PP;
+use Text::Wrap;
+use Text::Unidecode;
+use Data::Dumper;
+use TelstarFrame;
+use Paginator;
+
+###
+# Various settings and suchlike
+###
+
+# Which year are we in, and where's the schedule file?
+my $year     = 2022;
+my $filename = "$year.json";
+
+# Whether to show the day in the end time, if it differs from the start day.
+my $show_end_day = 0;
+
+# UI-friendly conversions for event type names
+my %types = (
+	talk => "Talk",
+	performance => "Performance",
+	workshop => "Workshop",
+	youthworkshop => "Youth Workshop",
+);
+
+# These could probably be computed but whatever
+my %dates = (
+	"2022-06-02" => "Thu",
+	"2022-06-03" => "Fri",
+	"2022-06-04" => "Sat",
+	"2022-06-05" => "Sun",
+	"2022-06-06" => "Mon",
+);
+
+###
+# Subroutines
+###
+
+# Sort criterion - by start time
+sub by_time
+{
+	defined $a->{"start_date"} or die "$a->{id}: no start date";
+	defined $b->{"start_date"} or die "$b->{id}: no start date";
+	return $a->{"start_date"} cmp $b->{"start_date"};
+}
+
+# Turn an ISO date/timestamp into a friendly 'Day HH:MM' format
+sub format_date($)
+{
+	my $datetime = shift;
+
+	if ($datetime =~ /(\d{4}-\d\d-\d\d) (\d\d:\d\d):\d\d/)
+	{
+		if (exists $dates{$1})
+		{	
+			return $dates{$1} . " " . $2;
+		}
+		else
+		{
+			print "No date [$1]";
+			return $datetime;
+		}
+	}
+
+	return $datetime;
+}
+
+# Given start and end times, format the end time appropriately
+# (i.e. including the day if it isn't the same day the event starts)
+sub format_end_time($$)
+{
+	my ($start, $end) = @_;
+
+	my $formatted = format_date($end);
+
+	if (!$show_end_day || (split(/ /, $end))[0] eq (split(/ /, $start))[0])
+	{
+		$formatted = (split(/ /, $formatted))[1];
+	}
+
+	return $formatted;
+}
+
+#
+sub generate_schedule_tree($$@)
+{
+	my ($root, $heading, @events) = @_;
+
+	print "Generating $heading with " . scalar @events . " events...\n";
+
+	# Wrap widths are one less than expected because if the text runs into the
+	# final column, adding a linebreak causes a blank line.  Until TelstarFrame
+	# can correctly calculate line widths accounting for markup, we work around
+	# this by just avoiding the last column!
+	my $index_wrapper = Text::Wrapper->new(columns => 36);
+	my $event_wrapper = Text::Wrapper->new(columns => 38);
+
+	my @header = (
+		"[R][n][D][Y]EMF $year   $heading",
+		"",
+		"",
+	);
+
+	my $index = new TelstarFrame($root);
+	my $index_paginator = new Paginator($index,
+	{
+		header => \@header,
+		continues => "",
+		continued => "",
+	});
+	my $index_key = 0;
+
+	for my $event (@events)
+	{
+		my $entry_frame = ($root * 1000) + $event->{id};
+
+		# Build the index entry for this event
+		my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
+		my @wrapped_title = split /\n/, $index_wrapper->wrap($event->{title});
+		my @wrapped_by    = split /\n/, $index_wrapper->wrap("$event->{type} by " . $event->{by});
+
+		my $wrapped_first = shift @wrapped_by;
+		$wrapped_first =~ s/ by / by[C]/;
+		
+		my @index_entry = ();
+		push @index_entry, map "  [Y]$_", @wrapped_title;
+		push @index_entry, "  [W]$wrapped_first";
+		push @index_entry, map "  [C]$_", @wrapped_by;
+		push @index_entry, "";
+
+		# Add index entry to index page
+		if (! $index_paginator->has_room_for(@index_entry))
+		{
+			$index_paginator->new_page();
+			$index_key = 0;
+		}
+
+		# Set menu number
+		unshift @index_entry, "[B]" . ++$index_key . $schedule_line;
+		$index_paginator->add_text_block(@index_entry);
+		$index_paginator->frame()->set_route($index_key, $entry_frame);
+
+		# Now create the event detail frames
+		my $frame = new TelstarFrame($entry_frame);
+		my $paginator = new Paginator($frame,
+		{
+			header => [ @header, $schedule_line ],
+			prefix => " ",
+		});
+
+		# Re-wrap the title and speaker list since we have a couple of extra
+		# characters to play with on these pages...
+		@wrapped_title = split /\n/, $event_wrapper->wrap($event->{title});
+		@wrapped_by    = split /\n/, $event_wrapper->wrap("$event->{type} by " . $event->{by});
+
+		$wrapped_first = shift @wrapped_by;
+		$wrapped_first =~ s/ by / by[C]/;
+
+		# Add the title over as many lines as needed
+		map { $frame->add_line("[Y]$_"); } @wrapped_title;
+
+		# And the event type and first line of speaker list
+		$frame->add_line("[W]$wrapped_first");
+
+		# Rest of the speaker list, if any, and a blank line
+		map { $frame->add_line("[C]$_"); } @wrapped_by;
+		$frame->add_line("");
+
+		# And finally we can add the complete event description
+		# which could easily span several pages.
+		$paginator->paginate_text($event->{desc});
+	}
+
+	$index_paginator->finish();
+}
+
+# Gather and display statistics about long items, weird times etc.
+sub show_statistics(@)
+{
+	my $longest_title_chars = 0;
+	my $longest_title_lines = 0;
+	my $longest_desc_chars  = 0;
+	my $longest_desc_lines  = 0;
+	my $longest_by_chars    = 0;
+	my $longest_by_lines    = 0;
+	my $longest_venue       = 0;
+	my $longest_index_lines = 0;
+	my $spanning_days       = 0;
+	my $spanning_24_hours   = 0;
+
+	my $wrapper = Text::Wrapper->new(columns => 36);
+
+	for my $event (@_)
+	{
+		my ($sday, $shour, $smin) = ($event->{sdate} =~ /\-(\d\d) (\d\d):(\d\d)/);
+		my ($eday, $ehour, $emin) = ($event->{edate} =~ /\-(\d\d) (\d\d):(\d\d)/);
+
+		if ($sday != $eday)
+		{
+			$spanning_days++;
+
+			if ($ehour > $shour || ($ehour == $shour && $emin >= $smin))
+			{
+				print "Event $event->{id} runs for more than 24 hours?  ($event->{sdate} to $event->{edate})\n";
+				$spanning_24_hours++;
+			}
+			else 
+			{
+				print "Event $event->{id} crosses midnight: $event->{sdate} to $event->{edate}.\n";
+			}
+		}
+
+		my $by = $event->{type} . " by " . $event->{by};
+
+		$longest_title_chars = max($longest_title_chars, length($event->{title}));
+		$longest_desc_chars = max($longest_desc_chars, length($event->{desc}));
+		$longest_by_chars = max($longest_by_chars, length($by));
+		$longest_venue = max($longest_venue, length($event->{venue}));
+
+		my $title_lines = scalar split /\n/, $wrapper->wrap($event->{title});
+		my $desc_lines = scalar split /\n/, $wrapper->wrap($event->{desc});
+		my $by_lines = scalar split /\n/, $wrapper->wrap($by);
+
+		$longest_title_lines = max($longest_title_lines, $title_lines);
+		$longest_desc_lines = max($longest_desc_lines, $desc_lines);
+		$longest_by_lines = max($longest_by_lines, $by_lines);
+
+		$longest_index_lines = max($longest_index_lines, $title_lines + $by_lines);
+	}
+
+	print "\n" if $spanning_days > 0;
+	print "Schedule statistics:\n";
+	print "====================\n";
+	print "Total schedule size ....: ", scalar @_, " events.\n";
+	print "Longest title ..........: $longest_title_lines lines, $longest_title_chars characters.\n";
+	print "Longest description ....: $longest_desc_lines lines, $longest_desc_chars characters.\n";
+	print "Longest speaker list ...: $longest_by_lines lines, $longest_by_chars characters.\n";
+	print "Longest index entry ....: $longest_index_lines lines.\n";
+	print "Longest venue name .....: $longest_venue characters.\n";
+	print "\n";
+}
+
+###
+# Main body of script
+###
+
+# Start by reading the schedule JSON...
+my $schedule;
+
+if (open my $input, "<", $filename)
+{
+	# Read the entire file in one go, decoding into a list-of-hashes.
+	local $/ = undef;
+	$schedule = JSON::PP->new->utf8->decode(<$input>);
+	close $input;
+}
+else
+{
+	die "Cannot open input $filename: $!";
+}
+
+# .. and then reformatting the complete event list into data we can display.
+my @events = ();
+for (sort by_time @$schedule)
+{
+	push @events, {
+		id    => $_->{"id"},
+		title => unidecode($_->{"title"}),
+		desc  => unidecode($_->{"description"}),
+		venue => $_->{"venue"},
+		type  => $types{$_->{"type"}},
+		by    => unidecode($_->{"speaker"}),
+		start => format_date($_->{"start_date"}),
+		end   => format_end_time($_->{"start_date"}, $_->{"end_date"}),
+		sdate => $_->{"start_date"},
+		edate => $_->{"end_date"},
+	};
+
+	$events[-1]->{day} = (split / /, $events[-1]->{start})[0];
+}
+
+# Give the event list the once-over, display general stats that might be useful
+# to eyeball to make sure our formatting isn't going to be horrendously broken.
+show_statistics(@events);
+
+# Now go ahead and create page hierarchies for each of the schedules we want.
+generate_schedule_tree(300, "Full Schedule", @events);
+generate_schedule_tree(301, "Friday Schedule", grep($_->{day} eq "Fri", @events));
+generate_schedule_tree(302, "Saturday Schedule", grep($_->{day} eq "Sat", @events));
+generate_schedule_tree(303, "Sunday Schedule", grep($_->{day} eq "Sun", @events));
+generate_schedule_tree(304, "Stage A Schedule", grep($_->{venue} eq "Stage A", @events));
+generate_schedule_tree(305, "Stage B Schedule", grep($_->{venue} eq "Stage B", @events));
+generate_schedule_tree(306, "Stage C Schedule", grep($_->{venue} eq "Stage C", @events));
+generate_schedule_tree(307, "Workshop Schedules", grep($_->{venue} =~ "Workshop", @events));
+generate_schedule_tree(308, "Null Sector Schedule", grep($_->{venue} =~ "Null Sector", @events));
+generate_schedule_tree(309, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Null Sector", @events));
