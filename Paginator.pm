@@ -29,6 +29,10 @@ sub new
         continues => defaults_to($args->{continues}, "[Y]... continues on next page"),
         continued => defaults_to($args->{continued}, "[Y]... continued from previous page"),
     }, $class;
+    
+    $self->{frame}->add_lines(@{$args->{header}});
+    
+    $self;
 }
 
 sub split_page

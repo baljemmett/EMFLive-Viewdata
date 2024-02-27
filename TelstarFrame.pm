@@ -34,6 +34,13 @@ sub add_line
     push @{$self->{content}{lines}}, $line;
 }
 
+# Append a bunch of lines to our internal representation of the frame.
+sub add_lines
+{
+    my $self = shift;
+    map {$self->add_line($_)} @_;
+}
+
 # How many lines do we currently have in the frame?
 sub count_lines
 {
