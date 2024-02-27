@@ -94,4 +94,27 @@ sub next_subpage
     return TelstarFrame->new($pid{"page-no"}, $pid{"frame-id"});
 }
 
+# Set a routing table entry [0-9 or -1/10/anything for hash]
+sub set_route
+{
+    my ($self, $route, $frame) = @_;
+
+    if (! defined $self->{"routing-table"})
+    {
+        my $base = $self->{"pid"}{"page-no"} * 10;
+
+        $self->{"routing-table"} = [ map $base + $_, 0..9 ];
+        push @{$self->{"routing-table"}}, $self->{"pid"}{"page-no"};
+    }
+
+    if ($route >= 0 && $route <= 9)
+    {
+        $self->{"routing-table"}->[$route] = $frame;
+    }
+    else
+    {
+        $self->{"routing-table"}->[10] = $frame;
+    }
+}
+
 1;
