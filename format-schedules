@@ -19,6 +19,8 @@ use Paginator;
 my $year     = 2022;
 my $filename = "$year.json";
 
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
 # Whether to show the day in the end time, if it differs from the start day.
 my $show_end_day = 0;
 
@@ -103,7 +105,7 @@ sub generate_schedule_tree($$@)
 	my $event_wrapper = Text::Wrapper->new(columns => 38);
 
 	my @header = (
-		"[R][n][D][Y]EMF $year   $heading",
+		"[R][n][D][Y]WHAT'S ON:[W]$heading",
 		"",
 		"",
 	);
