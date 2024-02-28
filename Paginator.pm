@@ -28,6 +28,10 @@ sub new
         nav_last  => defaults_to($args->{nav_last},  "[R][n][Y]Press[W]*#[Y]for prev or[W]0[Y]for index."),
         continues => defaults_to($args->{continues}, "[Y]... continues on next page"),
         continued => defaults_to($args->{continued}, "[Y]... continued from previous page"),
+
+        # specifies a new-page callback, which is passed the new frame.
+        # return falsity to suppress adding the header etc to it.
+        on_new_page => defaults_to($args->{on_new_page}, sub { 1 }),
     }, $class;
 
     $self->{frame}->add_lines(@{$args->{header}});
@@ -45,9 +49,13 @@ sub split_page
     $frame->write();
     $frame = $frame->next_subpage();
     $self->{frame} = $frame;
-    map { $frame->add_line($_) } @{$self->{header}};
 
-    $frame->add_line($self->{continued}) if $self->{continued};
+    if ($self->{on_new_page}->($self->{frame}))
+    {
+        map { $frame->add_line($_) } @{$self->{header}};
+
+        $frame->add_line($self->{continued}) if $self->{continued};
+    }
 
     my $remaining = $self->{height} - $frame->count_lines();
 

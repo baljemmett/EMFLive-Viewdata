@@ -156,7 +156,17 @@ sub generate_schedule_tree($$@)
 		{
 			header => [ @header, $schedule_line ],
 			prefix => " ",
+			on_new_page => sub
+			{
+				my $frame = shift;
+				# Route 0 back to index frame (TODO: can't get to sub-frames?)
+				$frame->set_route(0, $root);
+				1;
+			},
 		});
+
+		# Route 0 back to index frame (TODO: can't get to sub-frames?)
+		$frame->set_route(0, $root);
 
 		# Re-wrap the title and speaker list since we have a couple of extra
 		# characters to play with on these pages...
