@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use JSON::PP;
 
+our $directory = ".";
+our $service = undef;
+
 # Initialise the general structure of a Telstar frame,
 # given a frame number and optional subpage letter.
 sub new
@@ -17,7 +20,7 @@ sub new
         "visible" => JSON::PP::true,
         "navmessage-select" => undef,
         "navmessage-notfound" => undef,
-        "header-text" => undef,
+        "header-text" => $service,
         "routing-table" => undef,
         "content" => {
             "lines" => [],
@@ -53,7 +56,7 @@ sub count_lines
 # on the frame number and subpage letter.
 sub write
 {
-    my ($self, $directory) = @_;
+    my ($self, $dir) = @_;
 
     my %output = %$self;
     
@@ -65,7 +68,7 @@ sub write
         delete $output{$field} unless defined $output{$field};
     }
 
-    $directory = "." unless defined $directory;
+    $dir = $directory unless defined $dir;
     my $pid = \%{$output{pid}};
     my $filename = $directory . "/" . $pid->{"page-no"} . $pid->{"frame-id"} . ".json";
 
@@ -115,6 +118,14 @@ sub set_route
     {
         $self->{"routing-table"}->[10] = $frame;
     }
+}
+
+# Override the service name in the header.
+# (Can also be done by changing $self->{"header-text"} but this is cleaner)
+sub set_service
+{
+    my ($self, $service) = @_;
+    $self->{"header-text"} = $service;
 }
 
 1;
