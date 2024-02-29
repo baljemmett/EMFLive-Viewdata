@@ -5,9 +5,13 @@ use warnings;
 
 use JSON::PP;
 use Text::Unidecode;
+use Time::Piece;
 
 # Whether to show the day in the end time, if it differs from the start day.
 my $show_end_day = 0;
+
+# On what hour does the logical day ('broadcast day') end?
+my $logical_midnight = 3;   # 3 a.m.
 
 # UI-friendly conversions for event type names
 my %event_types = (
@@ -18,7 +22,7 @@ my %event_types = (
 );
 
 # These could probably be computed but whatever
-my %dates = (
+my %days = (
 	"2022-06-02" => "Thu",
 	"2022-06-03" => "Fri",
 	"2022-06-04" => "Sat",
@@ -34,6 +38,19 @@ sub by_time
 	return $a->{"start_date"} cmp $b->{"start_date"};
 }
 
+# Get a day name for a given date string, with caching
+sub get_day($)
+{
+    my $date = shift;
+
+    if (! exists $days{$date})
+    {
+        $days{$date} = Time::Piece->strptime($date, "%Y-%m-%d")->day;
+    }
+
+    $days{$date};
+}
+
 # Turn an ISO date/timestamp into a friendly 'Day HH:MM' format
 sub format_date($)
 {
@@ -41,15 +58,7 @@ sub format_date($)
 
 	if ($datetime =~ /(\d{4}-\d\d-\d\d) (\d\d:\d\d):\d\d/)
 	{
-		if (exists $dates{$1})
-		{	
-			return $dates{$1} . " " . $2;
-		}
-		else
-		{
-			print "No date [$1]";
-			return $datetime;
-		}
+		return get_day($1) . " " . $2;
 	}
 
 	return $datetime;
@@ -112,7 +121,9 @@ sub from_file($)
         };
 
         # Pull the (start) day out into its own field for ease of access.
-        $events[-1]->{day} = (split / /, $events[-1]->{start})[0];
+        # Account for logical midnight here, so that when we group by day
+        # events in the small hours show up on the previous day.
+        $events[-1]->{day} = ($events[-1]->{stime} - $logical_midnight * 60 * 60)->day;
     }
 
     @events;
