@@ -10,7 +10,7 @@ use Text::Unidecode;
 my $show_end_day = 0;
 
 # UI-friendly conversions for event type names
-my %types = (
+my %event_types = (
 	talk => "Talk",
 	performance => "Performance",
 	workshop => "Workshop",
@@ -93,6 +93,7 @@ sub from_file($)
     # .. and then reformatting the complete event list into data more suited
     # to our requirements and display restrictions.
     my @events = ();
+
     for (sort by_time @$schedule)
     {
         push @events, {
@@ -100,14 +101,17 @@ sub from_file($)
             title => unidecode($_->{"title"}),
             desc  => unidecode($_->{"description"}),
             venue => $_->{"venue"},
-            type  => $types{$_->{"type"}},
+            type  => $event_types{$_->{"type"}},
             by    => unidecode($_->{"speaker"}),
             start => format_date($_->{"start_date"}),
             end   => format_end_time($_->{"start_date"}, $_->{"end_date"}),
             sdate => $_->{"start_date"},
             edate => $_->{"end_date"},
+            stime => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
+            etime => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
         };
 
+        # Pull the (start) day out into its own field for ease of access.
         $events[-1]->{day} = (split / /, $events[-1]->{start})[0];
     }
 
