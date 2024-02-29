@@ -4,11 +4,10 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Time::Piece;
 use Time::Local qw(timelocal_posix);
-use POSIX qw(strftime);
 
 use ScheduleReader;
+use TelstarFrame;
 
 ###
 # Various settings and suchlike
