@@ -97,10 +97,9 @@ for my $venue (sort keys %venues)
 
 sub generate_list
 {
-    my $venues = shift;
-    my $event_root = shift;
+    my ($events_by_venue, $root, $event_root, @venues) = @_;
 
-	my $frame = new TelstarFrame(400);
+	my $frame = new TelstarFrame($root);
 	my $paginator = new Paginator($frame, {
         header    => [],
         continues => "",
@@ -108,7 +107,7 @@ sub generate_list
     });
 	my $wrapper = Text::Wrapper->new(columns => 38);
 
-	for my $venue (sort keys %{$venues})
+	for my $venue (@venues)
 	{
         my $key = 0;
 
@@ -121,7 +120,7 @@ sub generate_list
         {
             $key++;
 
-            if (! exists $venues->{$venue}{$which})
+            if (! exists $events_by_venue->{$venue}{$which})
             {
                 $paginator->add_text_block(
                     "",
@@ -133,7 +132,7 @@ sub generate_list
                 next;
             }
 
-            my $event = $venues->{$venue}{$which};
+            my $event = $events_by_venue->{$venue}{$which};
             my $entry_frame = ($event_root * 1000) + $event->{id};
 
             $paginator->add_text_block(
@@ -171,4 +170,11 @@ sub generate_list
     }
 }
 
-generate_list(\%venues, 300);
+generate_list(\%venues, 401, 300, "Stage A");
+generate_list(\%venues, 402, 300, "Stage B");
+generate_list(\%venues, 403, 300, "Stage C");
+generate_list(\%venues, 404, 300, sort grep /Workshop/, keys %venues);
+generate_list(\%venues, 405, 300, sort grep /Sector/, keys %venues);
+generate_list(\%venues, 406, 300, sort grep !/Stage|Workshop|Sector/, keys %venues);
+generate_list(\%venues, 407, 300, sort grep /Stage/, keys %venues);
+generate_list(\%venues, 409, 300, sort keys %venues);
