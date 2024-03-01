@@ -5,9 +5,12 @@ use warnings;
 
 use Getopt::Long;
 use Time::Local qw(timelocal_posix);
+use POSIX qw(strftime);
 
 use ScheduleReader;
 use TelstarFrame;
+use Paginator;
+use Text::Wrapper;
 
 ###
 # Various settings and suchlike
@@ -56,6 +59,8 @@ my @events = ScheduleReader::from_file($filename);
 
 print "Generating Now and Next details as of ", scalar localtime($now), ".\n";
 
+my $updated = strftime("%a %H:%M", localtime($now));
+
 my %venues = ();
 
 for my $event (@events)
@@ -89,3 +94,81 @@ for my $venue (sort keys %venues)
     my $event = $venues{$venue}{next};
     printf "%4d  %s - %s %-20s %s\n", $event->{id}, $event->{"start"}, $event->{"end"}, $event->{venue}, $event->{title};
 }
+
+sub generate_list
+{
+    my $venues = shift;
+    my $event_root = shift;
+
+	my $frame = new TelstarFrame(400);
+	my $paginator = new Paginator($frame, {
+        header    => [],
+        continues => "",
+        continued => "",
+    });
+	my $wrapper = Text::Wrapper->new(columns => 38);
+
+	for my $venue (sort keys %{$venues})
+	{
+        my $key = 0;
+
+        $paginator->add_text_block(
+            "[R][n][D][Y]NOW AND NEXT:[W]$venue",
+            "",
+        );
+
+        for my $which (qw(now next))
+        {
+            $key++;
+
+            if (! exists $venues->{$venue}{$which})
+            {
+                $paginator->add_text_block(
+                    "",
+                    "[B][n][Y] ON \U$which\E:",
+                    "",
+                    "[C]No event scheduled.",
+                );
+
+                next;
+            }
+
+            my $event = $venues->{$venue}{$which};
+            my $entry_frame = ($event_root * 1000) + $event->{id};
+
+            $paginator->add_text_block(
+                "",
+                "[B][n][Y] ON \U$which\E: press[W]${key}[Y]for details",
+            );
+
+            # Build the index entry for this event
+#           my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
+            my $schedule_line = "[C]$event->{start} - $event->{end}";
+            my @wrapped_title = split /\n/, $wrapper->wrap($event->{title});
+            my @wrapped_by    = split /\n/, $wrapper->wrap("$event->{type} by " . $event->{by});
+
+            my $wrapped_first = shift @wrapped_by;
+            $wrapped_first =~ s/ by / by[C]/;
+            
+            my @entry = ();
+            push @entry, "";
+            push @entry, $schedule_line;
+            push @entry, map "[Y]$_", @wrapped_title;
+            push @entry, "[W]$wrapped_first";
+            push @entry, map "[C]$_", @wrapped_by;
+
+            $paginator->add_text_block(@entry);
+            $paginator->frame->set_route($key, $entry_frame);
+		}
+
+        my $blanks = 21 - $paginator->frame->count_lines();
+        $paginator->add_text_block(
+            map("", 1..$blanks),
+            sprintf("%40s", "[W]Updated " . $updated),
+        );
+
+		$paginator->new_page();
+    }
+}
+
+generate_list(\%venues, 300);
