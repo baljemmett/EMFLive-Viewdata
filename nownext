@@ -105,6 +105,21 @@ my %no_event_msgs = (
     next => "No more events today.",
 );
 
+sub set_routes
+{
+    my $frame = shift;
+
+    # Route 7-9 to Stages A-C
+    $frame->set_route(7, 401);
+    $frame->set_route(8, 402);
+    $frame->set_route(9, 403);
+
+    # Route 0 back to index frame
+    $frame->set_route(0, 4);
+
+    1;
+}
+
 sub generate_list
 {
     my ($events_by_venue, $root, $event_root, @venues) = @_;
@@ -114,8 +129,11 @@ sub generate_list
         header    => [],
         continues => "",
         continued => "",
+        on_new_page => \&set_routes
     });
 	my $wrapper = Text::Wrapper->new(columns => 38);
+
+    set_routes($frame);
 
 	for my $venue (@venues)
 	{
@@ -170,10 +188,11 @@ sub generate_list
             $paginator->frame->set_route($key, $entry_frame);
 		}
 
-        my $blanks = 21 - $paginator->frame->count_lines();
+        my $blanks = 20 - $paginator->frame->count_lines();
         $paginator->add_text_block(
             map("", 1..$blanks),
             sprintf("%40s", "[W]Updated " . $updated),
+            "[R][n][W]7[Y]Stage A,[W]8[Y]Stage B,[W]9[Y]Stage C",
         );
 
 		$paginator->new_page();
