@@ -60,11 +60,14 @@ my @events = ScheduleReader::from_file($filename);
 print "Generating Now and Next details as of ", scalar localtime($now), ".\n";
 
 my $updated = strftime("%a %H:%M", localtime($now));
+my $logical_day = strftime("%a", localtime($now - $ScheduleReader::logical_midnight * 60 * 60));
 
 my %venues = ();
 
 for my $event (@events)
 {
+    next if ($event->{day} ne $logical_day);
+
 	# Currently in between the start and end times? It's on now!
     if ($event->{stime} <= $now && $now <= $event->{etime})
     {
@@ -94,6 +97,11 @@ for my $venue (sort keys %venues)
     my $event = $venues{$venue}{next};
     printf "%4d  %s - %s %-20s %s\n", $event->{id}, $event->{"start"}, $event->{"end"}, $event->{venue}, $event->{title};
 }
+
+my %no_event_msgs = (
+    now => "No event scheduled.",
+    next => "No more events today.",
+);
 
 sub generate_list
 {
@@ -126,7 +134,7 @@ sub generate_list
                     "",
                     "[B][n][Y] ON \U$which\E:",
                     "",
-                    "[C]No event scheduled.",
+                    "[C]" . $no_event_msgs{$which},
                 );
 
                 next;
