@@ -62,6 +62,8 @@ print "Generating Now and Next details as of ", scalar localtime($now), ".\n";
 my $updated = strftime("%a %H:%M", localtime($now));
 my $logical_day = strftime("%a", localtime($now - $ScheduleReader::logical_midnight * 60 * 60));
 
+my @all_venues = ScheduleReader::all_venues(@events);
+
 my %venues = ();
 
 for my $event (@events)
@@ -181,8 +183,8 @@ sub generate_list
 generate_list(\%venues, 401, 300, "Stage A");
 generate_list(\%venues, 402, 300, "Stage B");
 generate_list(\%venues, 403, 300, "Stage C");
-generate_list(\%venues, 404, 300, sort grep /Workshop/, keys %venues);
-generate_list(\%venues, 405, 300, sort grep /Sector/, keys %venues);
-generate_list(\%venues, 406, 300, sort grep !/Stage|Workshop|Sector/, keys %venues);
-generate_list(\%venues, 407, 300, sort grep /Stage/, keys %venues);
-generate_list(\%venues, 409, 300, sort keys %venues);
+generate_list(\%venues, 404, 300, grep /Workshop/, @all_venues);
+generate_list(\%venues, 405, 300, grep /Sector/, @all_venues);
+generate_list(\%venues, 406, 300, grep !/Stage|Workshop|Sector/, @all_venues);
+generate_list(\%venues, 407, 300, grep /Stage/, @all_venues);
+generate_list(\%venues, 409, 300, @all_venues);

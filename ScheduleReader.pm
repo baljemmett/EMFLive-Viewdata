@@ -128,3 +128,16 @@ sub from_file($)
 
     @events;
 }
+
+# Find a list of all venues present in a loaded schedule
+sub all_venues
+{
+    my %venues = ();
+
+    for my $event (@_)
+    {
+        $venues{$event->{venue}} = 1;
+    }
+
+    sort keys %venues;
+}
