@@ -8,13 +8,13 @@ use Text::Unidecode;
 use Time::Piece;
 
 # Whether to show the day in the end time, if it differs from the start day.
-my $show_end_day = 0;
+our $show_end_day = 0;
 
 # On what hour does the logical day ('broadcast day') end?
-my $logical_midnight = 3;   # 3 a.m.
+our $logical_midnight = 3;   # 3 a.m.
 
 # UI-friendly conversions for event type names
-my %event_types = (
+our %event_types = (
 	talk => "Talk",
 	performance => "Performance",
 	workshop => "Workshop",
