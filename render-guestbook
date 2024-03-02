@@ -1,0 +1,78 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use JSON::PP;
+use TelstarFrame;
+use Paginator;
+
+my $filename = "guestbook-entries.json";
+my $directory = "guestbook-frames";
+my $year = 2022;
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+# Start by reading the guestbook entries from the JSON file...
+my $entries;
+
+if (open my $input, "<", $filename)
+{
+    # Read the entire file in one go, decoding into a list-of-hashes.
+    local $/ = undef;
+    $entries = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+# And blat them straight out for now!
+my @header = (
+    "[R][n][D][Y]GUESTBOOK",
+    "",
+    "",
+    "[Y]Press[W]2[Y]to add your message below!",
+);
+
+my $frame = new TelstarFrame(701);
+my $paginator = new Paginator($frame,
+{
+    header => \@header,
+    continues => "",
+    continued => "",
+    on_new_page => sub {
+        my $frame = shift;
+        $frame->set_route(0, 7);    # 0 back to guestbook index
+        $frame->set_route(2, 96);   # 2 to sign the guestbook
+        $frame->set_route(10, 701); # # for next/first page
+        1;
+    }
+});
+
+$frame->set_route(0, 7);    # 0 back to guestbook index
+$frame->set_route(2, 96);   # 2 to sign the guestbook
+$frame->set_route(10, 701); # # for next/first page
+
+for my $entry (@$entries)
+{
+    my @entry = (
+        "",
+        sprintf("[Y]From[C]%-20s   [C]%9s", $entry->{from}, $entry->{display_time}),
+        map "[W]$_", @{$entry->{message}}
+    );
+
+    if (! $paginator->has_room_for(@entry))
+    {
+        $paginator->new_page();
+    }
+
+    $paginator->add_text_block(@entry);
+}
+
+$paginator->finish();

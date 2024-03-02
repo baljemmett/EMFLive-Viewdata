@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -ef
+
+# Helper script to interface between Telstar and the guestbook scripts
+
+# Set up the Perl environment
+cd $(dirname $0)
+PERL5LIB=.${PERL5LIB:+:$PERL5LIB}
+export PERL5LIB
+
+# Update the guestbook and generate frames
+./sign-guestbook --sign "$@"
+./render-guestbook
+
+# Push them into Telstar via the API
+./telstar-util login telstar-api:8001 2222222222 1234
+./telstar-util addframes telstar-api:8001 guestbook-frames primary
+
+# Tidy up
+rm telstar-util.tok guestbook-frames/*

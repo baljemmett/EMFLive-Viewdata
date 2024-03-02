@@ -1,0 +1,97 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+use JSON::PP;
+use POSIX qw(strftime);
+
+my $filename = "guestbook-entries.json";
+my $tempname = "guestbook-temp-$$.json";
+
+# Usage message?
+if (@ARGV < 1 || $ARGV[0] eq "--help" || $ARGV[0] eq "-h")
+{
+    print "sign-guestbook: add an entry to the Viewdata guestbook\n";
+    print "Usage: sign-guestbook --options\n";
+    print "    or sign-guestbook [--sign] \"name\" \"message line 1\" ... \"message line n\"\n";
+    print "\n";
+    print "Options:\n";
+    print "    -h | --help     Display this help text\n";
+    print "    -i | --init     Reinitialise an empty guestbook (DESTRUCTIVE)\n";
+    print "         --sign     Add an entry (default)\n";
+    exit;
+}
+
+my $name = shift @ARGV;
+
+# Create an empty guestbook, replacing whatever's already there?
+if ($name eq "--init" || $name eq "-i")
+{
+    open my $output, ">", $filename or die "Cannot open output $filename: $!";
+    print $output JSON::PP->new->utf8->pretty->encode([]);
+    close $output;
+    exit;
+}
+
+# Dummy parameter so that a user can't pass '--init' as their name etc.
+if ($name eq "--sign")
+{
+    $name = shift @ARGV;
+}
+
+# Read rest of parameters as the message text
+my @message = @ARGV;
+
+for my $line (@message)
+{
+    # Just trim trailing whitespace for now; we probably want to
+    # filter out potential nasties here later.
+    $line =~ s/\s+$//;
+}
+
+# Trim any trailing blank lines and check we have something left!
+while (@message > 0 && $message[-1] eq "")
+{
+    pop @message;
+}
+
+if (@message == 0)
+{
+    die "Message cannot be empty";
+}
+
+# Now we go ahead and read the existing entries from the JSON file...
+my $entries;
+
+if (open my $input, "<", $filename)
+{
+    # Read the entire file in one go, decoding into a list-of-hashes.
+    local $/ = undef;
+    $entries = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+# ... then add the new entry; put it first in the list so things are naturally
+# reverse-chronological (also easier to snip out for moderation purposes!)
+my @now = localtime;
+
+unshift @$entries, {
+    timestamp => strftime("%Y-%m-%d %H:%M:%S", @now),
+    display_time => strftime("%a %H:%M", @now),
+    from => $name,
+    message => \@message
+};
+
+# Write new list out to a temporary file...
+open my $output, ">", $tempname or die "Cannot open output $tempname: $!";
+print $output JSON::PP->new->utf8->pretty->encode($entries);
+close $output;
+
+# ... and rename it over the old one
+rename $tempname, $filename or die "Cannot rename $tempname to $filename: $!";
