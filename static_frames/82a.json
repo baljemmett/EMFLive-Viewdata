@@ -1,0 +1,66 @@
+{
+    "author-id": "",
+    "connection": {
+        "address": "glasstty.com",
+        "mode": "viewdata",
+        "port": 6502
+    },
+    "content": {
+        "data": "   [W]You are about to connect to the\r\n   [G]T[R]E[C]L[B]S[W]T[M]A[Y]R[W]Viewdata service,\r\n   [W]providing general news and\r\n   [W]information pages.\r\n\r\n   [W]Exiting the Gateway service will\r\n   [W]return you to EMF Live.\r\n\r\n   [G]The DLE character (Ctrl P), where\r\n   [G]keyboards support it, can also be\r\n   [G]used to return to EMF Live.",
+        "type": "markup"
+    },
+    "cost": 0,
+    "cursor": false,
+    "disable-clear": false,
+    "footer": {
+        "data": "",
+        "merge-data": null,
+        "type": ""
+    },
+    "frame-type": "gateway",
+    "header-text": "[R][n][C] EMF 2022[W]Live   [-]",
+    "navmessage-notfound": "",
+    "navmessage-select": "[B][n][Y]Press[W]_[Y]to continue.",
+    "pid": {
+        "frame-id": "a",
+        "page-no": 82
+    },
+    "redirect": {
+        "frame-id": "",
+        "page-no": 0
+    },
+    "response-data": {
+        "response-action": {
+            "args": null,
+            "exec": "",
+            "post-action-frame": {
+                "frame-id": "",
+                "page-no": 0
+            },
+            "post-cancel-frame": {
+                "frame-id": "",
+                "page-no": 0
+            }
+        },
+        "response-fields": null
+    },
+    "routing-table": [
+        820,
+        821,
+        822,
+        823,
+        824,
+        825,
+        826,
+        827,
+        828,
+        829,
+        8
+    ],
+    "title": {
+        "data": "[b][m-][g[   Telstar Gateway]][b][h-]\r\n",
+        "merge-data": null,
+        "type": "markup"
+    },
+    "visible": true
+}

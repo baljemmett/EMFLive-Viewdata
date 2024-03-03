@@ -1,0 +1,66 @@
+{
+    "author-id": "",
+    "connection": {
+        "address": "",
+        "mode": "",
+        "port": 0
+    },
+    "content": {
+        "data": "\r\n\r\n\r\n\r\n\r\n\r\n[b][m-]\r\n[W]   Thank you for using[Y]EMF 2022 Live\r\n\r\n    You were connected to[B][SERVER]\r\n    Session ended at[Y][TIME]\r\n                  on[Y][DATE]\r\n\r\n    Enjoy the festival!\r\n\r\n[b][m-]\r\n",
+        "type": "markup"
+    },
+    "cost": 0,
+    "cursor": false,
+    "disable-clear": false,
+    "footer": {
+        "data": "",
+        "merge-data": null,
+        "type": ""
+    },
+    "frame-type": "exit",
+    "header-text": "[B][n][W]Goodbye!",
+    "navmessage-select": "[B][n][Y]Disconnected.",
+    "navmessage-notfound": "[R][n][W]Page not found.[_-]",
+    "pid": {
+        "frame-id": "a",
+        "page-no": 90
+    },
+    "redirect": {
+        "frame-id": "",
+        "page-no": 0
+    },
+    "response-data": {
+        "response-action": {
+            "args": null,
+            "exec": "",
+            "post-action-frame": {
+                "frame-id": "",
+                "page-no": 0
+            },
+            "post-cancel-frame": {
+                "frame-id": "",
+                "page-no": 0
+            }
+        },
+        "response-fields": null
+    },
+    "routing-table": [
+        990,
+        990,
+        990,
+        990,
+        990,
+        990,
+        990,
+        990,
+        990,
+        990,
+        990
+    ],
+    "title": {
+        "data": "",
+        "merge-data": null,
+        "type": ""
+    },
+    "visible": true
+}

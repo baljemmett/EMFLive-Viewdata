@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+DATABASE=secondary
+SERVER=localhost:8001
+USERNAME=2222222222
+PASSWORD=1234
+
+rm -f telstar-util.tok
+./telstar-util login $SERVER $USERNAME $PASSWORD
+
+if ! [ -f telstar-util.tok ]
+then
+    echo "Login apparently failed!"
+    exit 1
+fi
+
+echo "Removing unused stock frames (failures tolerated)..."
+for frame in 6a 61a 62a 63a 64a
+do
+    echo -n "Removing ${frame}: "
+    ./telstar-util deleteframe $SERVER ${frame} $DATABASE || true
+done
+
+echo "Adding static frames..."
+for frame in static_frames/*.json
+do
+    frame_file="${frame#static_frames/}"
+
+    echo -n "Adding ${frame_file%.json}: "
+    ./telstar-util addframe $SERVER $frame $DATABASE
+done

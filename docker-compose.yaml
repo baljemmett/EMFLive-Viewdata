@@ -1,0 +1,68 @@
+version: "3.3"
+services:
+  telstar-01:
+    container_name: "telstar-server"
+    image: "johnnewcombe/telstar"
+    command: "server --port 8086"
+    ports:
+      - target: 8086
+        published: 8086
+    networks:
+      - telstar-network
+    volumes:
+      - type: volume
+        source: telstar-volume
+        target: /opt/telstar/volume
+    depends_on:
+      - mongodb
+    environment:
+      - TELSTAR_SERVER_DISPLAY_NAME=CERULEAN
+      - TELSTAR_DBCOLLECTION=PRIMARY
+  telstar-02:
+    container_name: "telstar-secondary"
+    image: "johnnewcombe/telstar"
+    command: "server --port 8087 --init"
+    ports:
+      - target: 8087
+        published: 8087
+    networks:
+      - telstar-network
+    volumes:
+      - type: volume
+        source: telstar-volume
+        target: /opt/telstar/volume
+    depends_on:
+      - mongodb
+    environment:
+      - TELSTAR_SERVER_DISPLAY_NAME=COBALT
+      - TELSTAR_DBCOLLECTION=SECONDARY
+  telstar-api:
+    container_name: "telstar-api"
+    image: "johnnewcombe/telstar"
+    command: "api --port 8001"
+    ports:
+      - target: 8001
+        published: 8001
+    networks:
+      - telstar-network
+    depends_on:
+      - mongodb
+    environment:
+      - TELSTAR_API_USERID=2222222222
+      - TELSTAR_API_PASSWORD=1234
+      - TELSTAR_COOKIE_SECRET=give-me-a-cookie
+  mongodb:
+    container_name: "telstar-mongo"
+    image: "mongo"
+    ports:
+      - target: 27017
+        published: 27017
+    networks:
+      telstar-network:
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+networks:
+  telstar-network:
+volumes:
+  telstar-volume:
