@@ -57,9 +57,15 @@ sub generate_schedule_tree($$@)
 
 	$index->{"pid"}{"sequential"} = 1;
 
-	for my $event (@events)
+	for my $event_idx (0..$#events)
 	{
+		my $event = $events[$event_idx];
+		my $prev_event = $event_idx > 0 ? $events[$event_idx - 1] : undef;
+		my $next_event = $event_idx < $#events ? $events[$event_idx + 1] : undef;
+
 		my $entry_frame = $first_entry_frame + $event->{id};
+		my $prev_entry_frame = defined $prev_event ? $first_entry_frame + $prev_event->{id} : undef;
+		my $next_entry_frame = defined $next_event ? $first_entry_frame + $next_event->{id} : undef;
 
 		sub set_routes
 		{
@@ -67,6 +73,10 @@ sub generate_schedule_tree($$@)
 
 			# Route 0 back to index frame on correct page
 			$frame->set_route(0, $index_paginator->frame()->{"pid"}{"page-no"});
+
+			# Route 7 and 9 to prev/next events, if possible
+			$frame->set_route(7, $prev_entry_frame) if defined $prev_entry_frame;
+			$frame->set_route(9, $next_entry_frame) if defined $next_entry_frame;
 		}
 
 		# Build the index entry for this event
