@@ -43,7 +43,10 @@ sub generate_schedule_tree($$@)
 		"",
 	);
 
-	my $index = new TelstarFrame($root);
+	my $first_index_frame =  $root       * 1000;
+	my $first_entry_frame = ($root + 10) * 1000;
+
+	my $index = new TelstarFrame($first_index_frame);
 	my $index_paginator = new Paginator($index,
 	{
 		header => \@header,
@@ -52,9 +55,19 @@ sub generate_schedule_tree($$@)
 	});
 	my $index_key = 0;
 
+	$index->{"pid"}{"sequential"} = 1;
+
 	for my $event (@events)
 	{
-		my $entry_frame = ($root * 1000) + $event->{id};
+		my $entry_frame = $first_entry_frame + $event->{id};
+
+		sub set_routes
+		{
+			my $frame = shift;
+
+			# Route 0 back to index frame on correct page
+			$frame->set_route(0, $index_paginator->frame()->{"pid"}{"page-no"});
+		}
 
 		# Build the index entry for this event
 		my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
@@ -91,14 +104,14 @@ sub generate_schedule_tree($$@)
 			on_new_page => sub
 			{
 				my $frame = shift;
-				# Route 0 back to index frame (TODO: can't get to sub-frames?)
-				$frame->set_route(0, $root);
+				# Configure routing for this event frame
+				set_routes($frame);
 				1;
 			},
 		});
 
-		# Route 0 back to index frame (TODO: can't get to sub-frames?)
-		$frame->set_route(0, $root);
+		# Configure routing for this event frame
+		set_routes($frame);
 
 		# Re-wrap the title and speaker list since we have a couple of extra
 		# characters to play with on these pages...
@@ -204,13 +217,13 @@ my @events = ScheduleReader::from_file($filename);
 show_statistics(@events);
 
 # Now go ahead and create page hierarchies for each of the schedules we want.
-generate_schedule_tree(300, "Full Schedule", @events);
-generate_schedule_tree(301, "Friday Schedule", grep($_->{day} eq "Fri", @events));
-generate_schedule_tree(302, "Saturday Schedule", grep($_->{day} eq "Sat", @events));
-generate_schedule_tree(303, "Sunday Schedule", grep($_->{day} eq "Sun", @events));
-generate_schedule_tree(304, "Stage A Schedule", grep($_->{venue} eq "Stage A", @events));
-generate_schedule_tree(305, "Stage B Schedule", grep($_->{venue} eq "Stage B", @events));
-generate_schedule_tree(306, "Stage C Schedule", grep($_->{venue} eq "Stage C", @events));
-generate_schedule_tree(307, "Workshop Schedules", grep($_->{venue} =~ "Workshop", @events));
-generate_schedule_tree(308, "Null Sector Schedule", grep($_->{venue} =~ "Null Sector", @events));
-generate_schedule_tree(309, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Null Sector", @events));
+generate_schedule_tree(100, "Full Schedule", @events);
+generate_schedule_tree(101, "Friday Schedule", grep($_->{day} eq "Fri", @events));
+generate_schedule_tree(102, "Saturday Schedule", grep($_->{day} eq "Sat", @events));
+generate_schedule_tree(103, "Sunday Schedule", grep($_->{day} eq "Sun", @events));
+generate_schedule_tree(104, "Stage A Schedule", grep($_->{venue} eq "Stage A", @events));
+generate_schedule_tree(105, "Stage B Schedule", grep($_->{venue} eq "Stage B", @events));
+generate_schedule_tree(106, "Stage C Schedule", grep($_->{venue} eq "Stage C", @events));
+generate_schedule_tree(107, "Workshop Schedules", grep($_->{venue} =~ "Workshop", @events));
+generate_schedule_tree(108, "Null Sector Schedule", grep($_->{venue} =~ "Null Sector", @events));
+generate_schedule_tree(109, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Null Sector", @events));
