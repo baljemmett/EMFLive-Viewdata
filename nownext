@@ -110,12 +110,12 @@ sub set_routes
     my $frame = shift;
 
     # Route 7-9 to Stages A-C
-    $frame->set_route(7, 401);
-    $frame->set_route(8, 402);
-    $frame->set_route(9, 403);
+    $frame->set_route(7, 21);
+    $frame->set_route(8, 22);
+    $frame->set_route(9, 23);
 
     # Route 0 back to index frame
-    $frame->set_route(0, 4);
+    $frame->set_route(0, 2);
 
     1;
 }
@@ -192,18 +192,18 @@ sub generate_list
         $paginator->add_text_block(
             map("", 1..$blanks),
             sprintf("%40s", "[W]Updated " . $updated),
-            "[R][n][W]7[Y]Stage A,[W]8[Y]Stage B,[W]9[Y]Stage C",
+            "[R][n][W]7[Y]Stage A   [W]8[Y]Stage B   [W]9[Y]Stage C",
         );
 
 		$paginator->new_page();
     }
 }
 
-generate_list(\%venues, 401, 300, "Stage A");
-generate_list(\%venues, 402, 300, "Stage B");
-generate_list(\%venues, 403, 300, "Stage C");
-generate_list(\%venues, 404, 300, grep /Workshop/, @all_venues);
-generate_list(\%venues, 405, 300, grep /Sector/, @all_venues);
-generate_list(\%venues, 406, 300, grep !/Stage|Workshop|Sector/, @all_venues);
-generate_list(\%venues, 407, 300, grep /Stage/, @all_venues);
-generate_list(\%venues, 409, 300, @all_venues);
+generate_list(\%venues, 21, 110, "Stage A");
+generate_list(\%venues, 22, 110, "Stage B");
+generate_list(\%venues, 23, 110, "Stage C");
+generate_list(\%venues, 24, 110, grep /Workshop/, @all_venues);
+generate_list(\%venues, 25, 110, grep /Sector/, @all_venues);
+generate_list(\%venues, 26, 110, grep !/Stage|Workshop|Sector/, @all_venues);
+generate_list(\%venues, 27, 110, grep /Stage/, @all_venues);
+generate_list(\%venues, 29, 110, @all_venues);
