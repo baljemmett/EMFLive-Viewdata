@@ -46,9 +46,12 @@ sub split_page
     $frame->add_line($self->{continues}) if $self->{continues};
     $frame->{"navmessage-select"} = $frame->{"pid"}{"frame-id"} eq "a" ? $self->{nav_first} : $self->{nav_mid};
 
+    # Create new subframe before we save this one, so that
+    # routing works if set to sequential numbering.
+    my $next_frame = $frame->next_subpage();
     $frame->write();
-    $frame = $frame->next_subpage();
-    $self->{frame} = $frame;
+    
+    $self->{frame} = $frame = $next_frame;
 
     if ($self->{on_new_page}->($self->{frame}))
     {

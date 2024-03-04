@@ -3,6 +3,7 @@ package TelstarFrame;
 use strict;
 use warnings;
 use JSON::PP;
+use Storable qw(dclone);
 
 our $directory = ".";
 our $service = undef;
@@ -14,6 +15,7 @@ sub new
     my ($class, $number, $subpage) = @_;
     my $self = bless {
         "pid" => {
+            "sequential" => 0,
             "page-no" => $number,
             "frame-id" => defined $subpage ? $subpage : "a"
         },
@@ -58,10 +60,11 @@ sub write
 {
     my ($self, $dir) = @_;
 
-    my %output = %$self;
+    my %output = %{dclone $self};
     
     $output{content}{data} = join "\r\n", @{$output{content}{lines}};
     delete $output{content}{lines};
+    delete $output{pid}{sequential};
 
     for my $field (qw(navmessage-select navmessage-notfound header-text routing-table))
     {
@@ -77,14 +80,26 @@ sub write
     close $file;
 }
 
-# Create a new TelstarFrame object representing the successor subpage
-# to this object.
+# Create a new TelstarFrame object representing the successor subpage to
+# this object, or if the 'sequential' flag is set the next numeric page.
 sub next_subpage
 {
     my $self = shift;
     my %pid = %{$self->{pid}};
 
-    if ($pid{"frame-id"} eq "z")
+    if ($pid{"sequential"})
+    {
+        $pid{"page-no"}++;
+
+        # Route the # key on this frame to the number of the new frame.
+        # If we're using successor subframes this happens automatically!
+        if (! defined $self->{"routing-table"} ||
+            $self->{"routing-table"}[10] == $self->{"pid"}{"page-no"})
+        {
+            $self->set_route(10, $pid{"page-no"});
+        }
+    }
+    elsif ($pid{"frame-id"} eq "z")
     {
         $pid{"page-no"} *= 10;
         $pid{"frame-id"} = "a";
@@ -94,7 +109,10 @@ sub next_subpage
         $pid{"frame-id"} = chr(ord($pid{"frame-id"}) + 1);
     }
 
-    return TelstarFrame->new($pid{"page-no"}, $pid{"frame-id"});
+    my $frame = TelstarFrame->new($pid{"page-no"}, $pid{"frame-id"});
+    $frame->{"pid"}{"sequential"} = $pid{"sequential"};
+
+    return $frame;
 }
 
 # Set a routing table entry [0-9 or -1/10/anything for hash]
