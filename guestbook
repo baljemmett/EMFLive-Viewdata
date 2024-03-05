@@ -18,4 +18,4 @@ export PERL5LIB
 ./telstar-util addframes telstar-api:8001 guestbook-frames primary
 
 # Tidy up
-rm telstar-util.tok guestbook-frames/*
+rm -r telstar-util.tok guestbook-frames
