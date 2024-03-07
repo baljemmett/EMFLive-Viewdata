@@ -30,6 +30,17 @@ my %days = (
 	"2022-06-06" => "Mon",
 );
 
+# Set of regexes used to reorder venues in the canonical list. Venues matching
+# these will be moved to the front of the list, in this order. Otherwise the
+# default alphabetic ordering is applied.
+my @venue_order_regexes = (
+    qr/Stage [ABC]/,
+    qr/Workshop/,
+    qr/Blacksmith/,
+    qr/Lounge|Bar/i,
+    qr/Null Sector/,
+);
+
 # Sort criterion - by start time
 sub by_time
 {
@@ -139,5 +150,17 @@ sub all_venues
         $venues{$event->{venue}} = 1;
     }
 
-    sort keys %venues;
+    my @venues = sort keys %venues;
+
+    for my $re (reverse @venue_order_regexes)
+    {
+        my @matches = grep $_ =~ $re, @venues;
+        my @others  = grep $_ !~ $re, @venues;
+
+        @venues = (@matches, @others);
+    }
+
+    return @venues;
 }
+
+1;
