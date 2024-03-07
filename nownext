@@ -124,7 +124,9 @@ sub generate_list
 {
     my ($events_by_venue, $root, $event_root, @venues) = @_;
 
-	my $frame = new TelstarFrame($root);
+    my $first_frame = $root * 100;
+
+	my $frame = new TelstarFrame($first_frame);
 	my $paginator = new Paginator($frame, {
         header    => [],
         continues => "",
@@ -132,6 +134,8 @@ sub generate_list
         on_new_page => \&set_routes
     });
 	my $wrapper = Text::Wrapper->new(columns => 38);
+
+	$frame->{"pid"}{"sequential"} = 1;
 
     set_routes($frame);
 
@@ -195,7 +199,17 @@ sub generate_list
             "[R][n][W]7[Y]Stage A   [W]8[Y]Stage B   [W]9[Y]Stage C",
         );
 
-		$paginator->new_page();
+        if ($venue eq $venues[-1])
+        {
+            # Route # on last page back to first page, for a continuous carousel.
+            $paginator->frame->set_route(10, $first_frame);
+            $paginator->finish();
+        }
+        else
+        {
+            # More pages to come; Paginator handles routing for sequential pages.
+    		$paginator->new_page();
+        }
     }
 }
 

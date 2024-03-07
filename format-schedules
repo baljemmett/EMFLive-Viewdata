@@ -160,11 +160,9 @@ sub generate_schedule_tree($$@)
 }
 
 # Generate a tree of event detail pages for use by a now/next page
-sub generate_nownext_pages($$@)
+sub generate_nownext_pages($$$@)
 {
-	my ($root, $heading, @events) = @_;
-
-	print "Generating now/next for $heading with " . scalar @events . " events...\n";
+	my ($events, $root, $heading, @venues) = @_;
 
 	my @header = (
 		"[R][n][D][Y]NOW & NEXT:[W]$heading",
@@ -172,6 +170,20 @@ sub generate_nownext_pages($$@)
 		"",
 	);
 
+	# Determine now/next frame number for each venue, based on root page number
+	# and supplied order of venues for this now/next group
+	my %venue_pages = ();
+	for my $venue_idx (0..$#venues)
+	{
+		$venue_pages{$venues[$venue_idx]} = ($root * 100) + $venue_idx;
+	}
+
+	# Filter events to only those in a venue included in this group
+	my @events = grep exists $venue_pages{$_->{venue}}, @$events;
+	print "Generating now/next details for $heading with " , scalar @events,
+	      " events...\n";
+
+	# Now create detail pages for each event by ID
 	my $first_entry_frame = $root * 1000;
 	for my $event (@events)
 	{
@@ -181,7 +193,7 @@ sub generate_nownext_pages($$@)
 			my $frame = shift;
 
 			# Route 0 back to associated now/next frame
-			$frame->set_route(0, $root);
+			$frame->set_route(0, $venue_pages{$event->{venue}});
 
 			1;
 		};
@@ -280,11 +292,15 @@ generate_schedule_tree(107, "Workshop Schedules", grep($_->{venue} =~ "Workshop"
 generate_schedule_tree(108, "Null Sector Schedule", grep($_->{venue} =~ "Null Sector", @events));
 generate_schedule_tree(109, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Null Sector", @events));
 
-generate_nownext_pages(21, "Stage A", grep($_->{venue} eq "Stage A", @events));
-generate_nownext_pages(22, "Stage B", grep($_->{venue} eq "Stage B", @events));
-generate_nownext_pages(23, "Stage C", grep($_->{venue} eq "Stage C", @events));
-generate_nownext_pages(24, "Workshops", grep($_->{venue} =~ "Workshop", @events));
-generate_nownext_pages(25, "Null Sector", grep($_->{venue} =~ "Sector", @events));
-generate_nownext_pages(26, "Other Venues", grep($_->{venue} !~ "Stage|Workshop|Sector", @events));
-generate_nownext_pages(27, "All Stages", grep($_->{venue} =~ "Stage", @events));
-generate_nownext_pages(29, "All Venues", @events);
+# Get the canonical venue ordering so that we can work out the correct parent
+# page when generating now/next detail pages.
+my @all_venues = ScheduleReader::all_venues(@events);
+
+generate_nownext_pages(\@events, 21, "Stage A", grep($_ eq "Stage A", @all_venues));
+generate_nownext_pages(\@events, 22, "Stage B", grep($_ eq "Stage B", @all_venues));
+generate_nownext_pages(\@events, 23, "Stage C", grep($_ eq "Stage C", @all_venues));
+generate_nownext_pages(\@events, 24, "Workshops", grep($_ =~ "Workshop", @all_venues));
+generate_nownext_pages(\@events, 25, "Null Sector", grep($_ =~ "Sector", @all_venues));
+generate_nownext_pages(\@events, 26, "Other Venues", grep($_ !~ "Stage|Workshop|Sector", @all_venues));
+generate_nownext_pages(\@events, 27, "All Stages", grep($_ =~ "Stage", @all_venues));
+generate_nownext_pages(\@events, 29, "All Venues", @all_venues);

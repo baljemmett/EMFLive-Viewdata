@@ -1,0 +1,12 @@
+{
+    "frame-type": "redirect",
+    "pid": {
+        "frame-id": "a",
+        "page-no": 23
+    },
+    "redirect": {
+        "frame-id": "a",
+        "page-no": 2300
+    },
+   "visible": true
+}
