@@ -6,6 +6,9 @@ use TelstarFrame;
 use Text::Wrapper;
 use Data::Dumper;
 
+# Set to dump debug information about pagination and widow/orphan control
+my $debug = 0;
+
 sub defaults_to
 {
     my ($arg, $default) = @_;
@@ -102,9 +105,12 @@ LAYOUT:
         my $para_lines = @paragraph;
 
         # Would starting it here leave an orphan on this page?
-        if ($remaining < $orphan_threshold && $para_lines > ($final_para ? $orphan_threshold : 1))
+        # (That is, we have $orphan_threshold or fewer lines of space
+        # left and the paragraph is longer than one line; special-case
+        # the last paragraph since that doesn't have a break after it.)
+        if ($remaining <= $orphan_threshold && $para_lines > ($final_para ? $orphan_threshold : 1))
         {
-            print "Splitting para due to orphan control ($remaining left, $para_lines in para)\n";
+            print "Not breaking para due to orphan control ($remaining left, $para_lines in para)\n" if $debug;
             ($frame, $remaining) = $self->split_page($frame);
 
             # Fall through to lay out paragraph on new page!
@@ -113,18 +119,26 @@ LAYOUT:
         # Does it fit completely?
         if ($para_lines < $remaining || ($para_lines == $remaining && $final_para))
         {
-            print "Adding paragraph as-is ($remaining left, $para_lines in para)\n";
+            print "Adding paragraph as-is ($remaining left, $para_lines in para)\n" if $debug;
             map { $frame->add_line($_) } @paragraph;
             $remaining -= $para_lines;
         }
 
         # Would it produce a widow on the next page?
-        elsif (($para_lines - $remaining) <= $orphan_threshold)
+        elsif (($para_lines - $remaining) < $orphan_threshold)
         {
-            print "Splitting para due to widow control ($remaining left, $para_lines in para)\n";
-            for $line (0..$remaining-($orphan_threshold))
+            if ($para_lines > $orphan_threshold + 1)
             {
-                $frame->add_line(shift @paragraph);
+                print "Splitting para early due to widow control ($remaining left, $para_lines in para)\n" if $debug;
+
+                for $line ($orphan_threshold+1..$para_lines)
+                {
+                    $frame->add_line(shift @paragraph);
+                }
+            }
+            else
+            {
+                print "Not breaking para due to widow control ($remaining left, $para_lines in para)\n" if $debug;
             }
 
             ($frame, $remaining) = $self->split_page($frame);
@@ -135,7 +149,7 @@ LAYOUT:
         # Split the paragraph across as many pages as needed
         else
         {
-            print "Splitting paragraph across pages ($remaining left, $para_lines in para)\n";
+            print "Splitting paragraph across pages ($remaining left, $para_lines in para)\n" if $debug;
             while ($remaining-- >= $orphan_threshold)
             {
                 $frame->add_line(shift @paragraph);
