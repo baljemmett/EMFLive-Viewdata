@@ -159,6 +159,38 @@ sub generate_schedule_tree($$@)
 	$index_paginator->finish();
 }
 
+# Generate a tree of event detail pages for use by a now/next page
+sub generate_nownext_pages($$@)
+{
+	my ($root, $heading, @events) = @_;
+
+	print "Generating now/next for $heading with " . scalar @events . " events...\n";
+
+	my @header = (
+		"[R][n][D][Y]NOW & NEXT:[W]$heading",
+		"",
+		"",
+	);
+
+	my $first_entry_frame = $root * 1000;
+	for my $event (@events)
+	{
+		my $entry_frame = $first_entry_frame + $event->{id};
+		my $set_routes = sub
+		{
+			my $frame = shift;
+
+			# Route 0 back to associated now/next frame
+			$frame->set_route(0, $root);
+
+			1;
+		};
+
+		# Now create the event detail frames
+		generate_event_detail_frames($event, $entry_frame, $set_routes, @header);
+	}
+}
+
 # Gather and display statistics about long items, weird times etc.
 sub show_statistics(@)
 {
@@ -247,3 +279,12 @@ generate_schedule_tree(106, "Stage C Schedule", grep($_->{venue} eq "Stage C", @
 generate_schedule_tree(107, "Workshop Schedules", grep($_->{venue} =~ "Workshop", @events));
 generate_schedule_tree(108, "Null Sector Schedule", grep($_->{venue} =~ "Null Sector", @events));
 generate_schedule_tree(109, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Null Sector", @events));
+
+generate_nownext_pages(21, "Stage A", grep($_->{venue} eq "Stage A", @events));
+generate_nownext_pages(22, "Stage B", grep($_->{venue} eq "Stage B", @events));
+generate_nownext_pages(23, "Stage C", grep($_->{venue} eq "Stage C", @events));
+generate_nownext_pages(24, "Workshops", grep($_->{venue} =~ "Workshop", @events));
+generate_nownext_pages(25, "Null Sector", grep($_->{venue} =~ "Sector", @events));
+generate_nownext_pages(26, "Other Venues", grep($_->{venue} !~ "Stage|Workshop|Sector", @events));
+generate_nownext_pages(27, "All Stages", grep($_->{venue} =~ "Stage", @events));
+generate_nownext_pages(29, "All Venues", @events);
