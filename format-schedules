@@ -21,21 +21,60 @@ my $filename = "$year.json";
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
 $TelstarFrame::directory = "newframes";
 
+# Wrap widths are one less than expected because if the text runs into the
+# final column, adding a linebreak causes a blank line.  Until TelstarFrame
+# can correctly calculate line widths accounting for markup, we work around
+# this by just avoiding the last column!
+my $index_wrapper = Text::Wrapper->new(columns => 36);
+my $event_wrapper = Text::Wrapper->new(columns => 38);
+
 ###
 # Subroutines
 ###
+
+# Generate the detail frames for an event
+sub generate_event_detail_frames($$$@)
+{
+	my ($event, $entry_frame_number, $on_new_page, @header) = @_;
+
+	my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
+	my $frame = new TelstarFrame($entry_frame_number);
+	my $paginator = new Paginator($frame,
+	{
+		header => [ @header, $schedule_line ],
+		prefix => " ",
+		on_new_page => $on_new_page
+	});
+
+	$on_new_page->($frame);
+
+	my @wrapped_title = split /\n/, $event_wrapper->wrap($event->{title});
+	my @wrapped_by    = split /\n/, $event_wrapper->wrap("$event->{type} by " . $event->{by});
+
+	my $wrapped_first = shift @wrapped_by;
+	$wrapped_first =~ s/ by / by[C]/;
+
+	# Add the title over as many lines as needed
+	map { $frame->add_line("[Y]$_"); } @wrapped_title;
+
+	# And the event type and first line of speaker list
+	$frame->add_line("[W]$wrapped_first");
+
+	# Rest of the speaker list, if any, and a blank line
+	map { $frame->add_line("[C]$_"); } @wrapped_by;
+	$frame->add_line("");
+
+	# And finally we can add the complete event description
+	# which could easily span several pages.
+	$paginator->paginate_text($event->{desc});
+}
+
+# Generate a complete schedule with event index and detail pages
 sub generate_schedule_tree($$@)
 {
 	my ($root, $heading, @events) = @_;
 
 	print "Generating $heading with " . scalar @events . " events...\n";
-
-	# Wrap widths are one less than expected because if the text runs into the
-	# final column, adding a linebreak causes a blank line.  Until TelstarFrame
-	# can correctly calculate line widths accounting for markup, we work around
-	# this by just avoiding the last column!
-	my $index_wrapper = Text::Wrapper->new(columns => 36);
-	my $event_wrapper = Text::Wrapper->new(columns => 38);
 
 	my @header = (
 		"[R][n][D][Y]WHAT'S ON:[W]$heading",
@@ -101,51 +140,20 @@ sub generate_schedule_tree($$@)
 		push @index_entry, map "  [C]$_", @wrapped_by;
 		push @index_entry, "";
 
-		# Add index entry to index page
+		# Set menu number and add index entry to index page
 		if (! $index_paginator->has_room_for(@index_entry))
 		{
 			$index_paginator->new_page();
 			$index_key = 0;
 		}
 
-		# Set menu number
 		unshift @index_entry, "[B]" . ++$index_key . $schedule_line;
 		$index_paginator->add_text_block(@index_entry);
 		$index_paginator->frame()->set_route($index_key, $entry_frame);
 
-		# Now create the event detail frames
-		my $frame = new TelstarFrame($entry_frame);
-		my $paginator = new Paginator($frame,
-		{
-			header => [ @header, $schedule_line ],
-			prefix => " ",
-			on_new_page => $set_routes,
-		});
 
-		# Configure routing for this event frame
-		$set_routes->($frame);
-
-		# Re-wrap the title and speaker list since we have a couple of extra
-		# characters to play with on these pages...
-		@wrapped_title = split /\n/, $event_wrapper->wrap($event->{title});
-		@wrapped_by    = split /\n/, $event_wrapper->wrap("$event->{type} by " . $event->{by});
-
-		$wrapped_first = shift @wrapped_by;
-		$wrapped_first =~ s/ by / by[C]/;
-
-		# Add the title over as many lines as needed
-		map { $frame->add_line("[Y]$_"); } @wrapped_title;
-
-		# And the event type and first line of speaker list
-		$frame->add_line("[W]$wrapped_first");
-
-		# Rest of the speaker list, if any, and a blank line
-		map { $frame->add_line("[C]$_"); } @wrapped_by;
-		$frame->add_line("");
-
-		# And finally we can add the complete event description
-		# which could easily span several pages.
-		$paginator->paginate_text($event->{desc});
+		# ... and finally create the detail frames
+		generate_event_detail_frames($event, $entry_frame, $set_routes, @header);
 	}
 
 	$index_paginator->finish();
