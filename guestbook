@@ -4,18 +4,22 @@ set -ef
 
 # Helper script to interface between Telstar and the guestbook scripts
 
+# Which Telstar database are we running in?
+# Lowercase the environment variable to use as a parameter for telstar-util
+DATABASE=${TELSTAR_DBCOLLECTION,,?}
+
 # Set up the Perl environment
 cd $(dirname $0)
 PERL5LIB=.${PERL5LIB:+:$PERL5LIB}
 export PERL5LIB
 
 # Update the guestbook and generate frames
-./sign-guestbook --sign "$@"
+[ $# == 0 ] || ./sign-guestbook --sign "$@"
 ./render-guestbook
 
 # Push them into Telstar via the API
 ./telstar-util login telstar-api:8001 2222222222 1234
-./telstar-util addframes telstar-api:8001 guestbook-frames primary
+./telstar-util addframes telstar-api:8001 guestbook-frames ${DATABASE:-primary}
 
 # Tidy up
 rm -r telstar-util.tok guestbook-frames

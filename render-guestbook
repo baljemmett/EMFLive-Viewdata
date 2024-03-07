@@ -34,13 +34,13 @@ else
 
 # And blat them straight out for now!
 my @header = (
-    "[R][n][D][Y]GUESTBOOK",
+    "[R][n][D][Y]GRAFFITI WALL:[W]View the Guestbook",
     "",
     "",
-    "[Y]Press[W]2[Y]to add your message below!",
+    "[Y]Press[W]1[Y]to add your message below!",
 );
 
-my $frame = new TelstarFrame(701);
+my $frame = new TelstarFrame(42);
 my $paginator = new Paginator($frame,
 {
     header => \@header,
@@ -48,16 +48,16 @@ my $paginator = new Paginator($frame,
     continued => "",
     on_new_page => sub {
         my $frame = shift;
-        $frame->set_route(0, 7);    # 0 back to guestbook index
-        $frame->set_route(2, 96);   # 2 to sign the guestbook
-        $frame->set_route(10, 701); # # for next/first page
+        $frame->set_route(0, 4);    # 0 back to guestbook index
+        $frame->set_route(1, 41);   # 1 to sign the guestbook
+        $frame->set_route(10, 42);  # # for next/first page
         1;
     }
 });
 
-$frame->set_route(0, 7);    # 0 back to guestbook index
-$frame->set_route(2, 96);   # 2 to sign the guestbook
-$frame->set_route(10, 701); # # for next/first page
+$frame->set_route(0, 4);    # 0 back to guestbook index
+$frame->set_route(1, 41);   # 1 to sign the guestbook
+$frame->set_route(10, 42);  # # for next/first page
 
 for my $entry (@$entries)
 {
