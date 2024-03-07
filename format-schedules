@@ -105,26 +105,7 @@ sub generate_schedule_tree($$@)
 	for my $event_idx (0..$#events)
 	{
 		my $event = $events[$event_idx];
-		my $prev_event = $event_idx > 0 ? $events[$event_idx - 1] : undef;
-		my $next_event = $event_idx < $#events ? $events[$event_idx + 1] : undef;
-
 		my $entry_frame = $first_entry_frame + $event->{id};
-		my $prev_entry_frame = defined $prev_event ? $first_entry_frame + $prev_event->{id} : undef;
-		my $next_entry_frame = defined $next_event ? $first_entry_frame + $next_event->{id} : undef;
-
-		my $set_routes = sub
-		{
-			my $frame = shift;
-
-			# Route 0 back to index frame on correct page
-			$frame->set_route(0, $index_paginator->frame()->{"pid"}{"page-no"});
-
-			# Route 7 and 9 to prev/next events, if possible
-			$frame->set_route(7, $prev_entry_frame) if defined $prev_entry_frame;
-			$frame->set_route(9, $next_entry_frame) if defined $next_entry_frame;
-
-			1;
-		};
 
 		# Build the index entry for this event
 		my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
@@ -151,7 +132,26 @@ sub generate_schedule_tree($$@)
 		$index_paginator->add_text_block(@index_entry);
 		$index_paginator->frame()->set_route($index_key, $entry_frame);
 
+		# Work out prev/next routes for event detail frames...
+		my $prev_event = $event_idx > 0 ? $events[$event_idx - 1] : undef;
+		my $next_event = $event_idx < $#events ? $events[$event_idx + 1] : undef;
+		my $prev_entry_frame = defined $prev_event ? $first_entry_frame + $prev_event->{id} : undef;
+		my $next_entry_frame = defined $next_event ? $first_entry_frame + $next_event->{id} : undef;
 
+		my $set_routes = sub
+		{
+			my $frame = shift;
+
+			# Route 0 back to index frame on correct page
+			$frame->set_route(0, $index_paginator->frame()->{"pid"}{"page-no"});
+
+			# Route 7 and 9 to prev/next events, if possible
+			$frame->set_route(7, $prev_entry_frame) if defined $prev_entry_frame;
+			$frame->set_route(9, $next_entry_frame) if defined $next_entry_frame;
+
+			1;
+		};
+		
 		# ... and finally create the detail frames
 		generate_event_detail_frames($event, $entry_frame, $set_routes, @header);
 	}
