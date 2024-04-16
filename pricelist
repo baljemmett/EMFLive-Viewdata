@@ -1,0 +1,256 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use utf8;
+
+use JSON::PP;
+use Text::Unidecode;
+use Text::Wrapper;
+use TelstarFrame;
+use Paginator;
+use Data::Dumper;
+use Getopt::Long;
+
+my $directory = "newframes";
+my $year = 2022;
+my $shop = 0;
+my $cybar = 0;
+
+GetOptions("year=s" => \$year,
+           "directory=s" => \$directory,
+           "shop" => \$shop,
+           "cybar" => \$cybar)
+or die "Error in command line arguments.";
+
+my $frame_number;
+my $filename;
+
+if ($shop && ! $cybar)
+{
+    $frame_number = 302;
+    $filename = "shop.json";
+}
+elsif ($cybar && ! $shop)
+{
+    $frame_number = 301;
+    $filename = "cybar.json";
+}
+else
+{
+    die "Specify either --shop or --cybar";
+}
+
+my $full_list;
+
+if (open my $input, "<", $filename)
+{
+    local $/ = undef;
+    $full_list = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+sub format_item($)
+{
+    my $product = shift;
+
+    my $right_width = $shop ? 7 : 13;   # "\x1F£19.99" is 7 chars, "\x1F£9.99/bottle" is 13 chars
+    my $left_width = 39 - $right_width;
+    my $low_stock_indicator = "\x1DLow stock!";
+    my $indent = 2;
+
+    my $description;
+    my $pricing;
+    my $abv = $product->{abv};
+    my $low_stock = 0;
+    
+    if ($product->{base_units_bought})
+    {
+        $low_stock = ($product->{base_units_remaining} / $product->{base_units_bought}) < 0.1;
+    }
+
+    if ($shop)
+    {
+        $description = unidecode($product->{description});
+        $pricing = "\x1F#" . $product->{price};
+    }
+    else
+    {
+        my $manufacturer = unidecode($product->{manufacturer});
+        my $name = unidecode($product->{name});
+
+        $description = "$manufacturer\x1F$name";
+        $pricing = sprintf("\x1F#%s/%s", $product->{price}, $product->{sale_unit_name});
+
+        $indent = length($manufacturer) + 1;
+        $indent = 2 if ($indent > 4);
+    }
+
+    my $wrapper = Text::Wrapper->new(columns => $left_width - 1,
+                                     par_start => "",
+                                     body_start => " "x$indent);
+
+    my @lines = split /\n/, $wrapper->wrap($description);
+    my $in_name = $shop;
+
+    # Add (internal) colour codes at start of line - \x1E for the manufacturer,
+    # \x1F for the product name - we don't know where these may have wrapped so
+    # look for the \x1F embedded in the wrap() call above to tell when we've
+    # moved from one to the other.
+    for my $idx (0..$#lines)
+    {
+        $lines[$idx] = ($in_name ? "\x1F" : "\x1E") . $lines[$idx];
+        $in_name = 1 if $lines[$idx] =~ /\x1F/;
+    }
+
+    # We need at least two lines if there's an ABV or stock indicator to display
+    if (@lines == 1 && ($low_stock || defined $abv))
+    {
+        push @lines, "";
+    }
+
+    if ($low_stock)
+    {
+        # Room for low stock indicator at end of second line, before ABV?
+        if (0 && ($left_width - length($lines[1])) > length($low_stock_indicator))
+        {
+            # Pad line to full width and then replace tail with indicator
+            $lines[1] = sprintf("%-*.*s", $left_width, $left_width, $lines[1]);
+            substr($lines[1], -length($low_stock_indicator), length($low_stock_indicator)) = $low_stock_indicator;
+        }
+
+        # Do we need to add a third line containing just the indicator?
+        elsif (defined $abv && @lines == 2)
+        {
+            push @lines, sprintf("%39s", $low_stock_indicator);
+        }
+
+        # Put it at the end of the last line
+        else
+        {
+            my $line = defined $abv ? 2 : 1;
+            $lines[$line] = sprintf("%-*.*s%*s", $left_width, $left_width, $lines[$line], $right_width, $low_stock_indicator);
+        }
+    } 
+
+    # Add ABV and prices to ends of first and second lines
+    $lines[0] = sprintf("%-*.*s%*s", $left_width, $left_width, $lines[0], $right_width, $pricing);
+
+    if (defined $abv)
+    {
+        my $gravity = sprintf("%5s%% ABV", $abv);
+        $lines[1] = sprintf("%-*.*s%*s", $left_width, $left_width, $lines[1], $right_width, $gravity);
+    }
+
+    for (@lines)
+    {
+        s/\x1D/[R]/g;
+        s/\x1E/[C]/g;
+        s/\x1F/[W]/g;
+    }
+
+    return @lines;
+}
+
+sub by_id
+{
+    return $a->{id} <=> $b->{id};
+}
+
+sub by_description
+{
+    return $a->{description} cmp $b->{description};
+}
+
+sub by_manuf_name
+{
+    return $a->{manufacturer} cmp $b->{manufacturer} ||
+           $a->{name} cmp $b->{name};
+}
+
+my %sections = ();
+
+# Scan full list and organise by department
+for my $key (keys %{$full_list})
+{
+    for my $item (@{$full_list->{$key}})
+    {
+        my $department = $item->{department}->{id};
+        push @{$sections{$department}}, $item;
+    }
+}
+
+my $caption = $shop ? "ESSENTIALS" : "COLD AS ICE";
+my $strap   = $shop ? "Available from the shop" : "On sale in the Cybar";
+
+my @header = (
+    "[R][n][D][Y]$caption:[W]$strap",
+    "",
+    "",
+);
+
+my $frame = new TelstarFrame($frame_number);
+my $paginator = new Paginator($frame,
+{
+    header => \@header,
+    continues => " "x12 . "[Y]Continues on next frame...",
+    continued => "",
+    on_new_page => sub {
+        my $frame = shift;
+        $frame->set_route(0, 3);    # 0 back to bar/shop index
+        1;
+    }
+});
+
+$frame->set_route(0, 3);    # 0 back to bar/shop index
+
+my $order = $shop ? \&by_description : \&by_manuf_name;
+
+for my $section (sort keys %sections)
+{
+    my $first = 1;
+    my $department = undef;
+
+    for my $item (sort $order @{$sections{$section}})
+    {
+        next if ! defined $item->{price};
+
+        my @section = ();
+
+        if (! defined $department)
+        {
+            $department = $item->{department}->{description};
+            $department =~ s/\N{U+2264}/<=/g;
+            $department =~ s/(\d\d% VAT)/$1 included/;
+            $department = unidecode($department);
+        }
+
+        push @section, "[Y]$department" . ($first ? ":" : " (continued):");
+        push @section, format_item($item);
+        push @section, "";
+
+        if (! $paginator->has_room_for(@section, ""))
+        {
+            $paginator->new_page();
+        }
+        elsif (! $first)
+        {
+            shift @section;
+        }
+
+        $paginator->add_text_block(@section);
+        $first = 0;
+    }
+}
+
+$paginator->finish();
