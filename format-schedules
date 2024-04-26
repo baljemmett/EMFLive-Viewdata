@@ -84,8 +84,13 @@ sub generate_event_detail_frames($$$@)
 	add_wrapped_event_field($frame, "Ages", $event->{ages}) if $event->{ages};
 	add_wrapped_event_field($frame, "Capacity", $event->{capacity}) if $event->{capacity};
 
+	# Reminder code followed by a blank line to set off the header block
+	my $reminderCode = $event->{reminder};
+	$frame->add_line("[W]ReminderCode (call 555-5555):[C]$reminderCode");
+
 	# A blank line to set off the header block, if needed
-	$frame->add_line("") if $event->{cost} || $event->{ages} || $event->{capacity};
+	$frame->add_line("") if $event->{cost} || $event->{ages} ||
+	                        $event->{capacity} || $reminderCode;
 
 	# Content note (if any) before description
 	if (defined $event->{cws} && $event->{cws} ne "")

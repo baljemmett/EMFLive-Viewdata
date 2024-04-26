@@ -91,6 +91,16 @@ sub format_end_time($$)
 	return $formatted;
 }
 
+# Derive a ReminderCode (trademark not applied for) for an event from its JSON.
+# This needs to be a stable derivation, since it's used both in the
+# schedule-publishing script and the reminder-database populating script!
+sub derive_reminder_code($)
+{
+    my $event = shift;
+
+    sprintf("99%04d", $event->{id});
+}
+
 # Load the schedule from a JSON file
 sub from_file($)
 {
@@ -133,6 +143,7 @@ sub from_file($)
             edate    => $_->{"end_date"},
             stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
             etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
+            reminder => derive_reminder_code($_),
         };
 
         # Convert £ to # because the 80s were a horrible time to ASCII.
