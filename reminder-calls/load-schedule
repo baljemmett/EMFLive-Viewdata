@@ -1,0 +1,128 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use DBI;
+use Data::Dumper;
+use List::Util qw/shuffle/;
+use Getopt::Long;
+
+use ScheduleReader;
+ 
+# Which year are we in, and where's the schedule file?
+my $year = 2022;
+
+# Other parameters from the command line
+my $max_events = 10;
+my $clear_existing = 0;
+
+GetOptions("year=s" => \$year,
+           "events=i" => \$max_events,
+           "clear-existing" => \$clear_existing)
+           or die "Error in command line arguments.";
+
+# Start by reading the schedule JSON...
+my $filename = "$year.json";
+my @events = ScheduleReader::from_file($filename);
+my @venues = ScheduleReader::all_venues(@events);
+
+# Pick $max_events at random (if requested)
+if ($max_events > 0)
+{
+    @events = (shuffle @events)[0..$max_events-1];
+}
+
+# Primary key columns for each table
+my %table_ids = (
+    history => "history_id",
+    reminders => "reminder_id",
+    events => "event_id",
+    venues => "venue_id"
+);
+
+# Pre-declare database handle so subs can see it
+my $db;
+
+# Populate the venues table and return a hashref we can use to
+# map venue names to (internal) venue IDs later.
+sub populate_venues
+{
+    my $inserter = $db->prepare('INSERT INTO venues(venue_name, venue_phrase) VALUES (?, ?)');
+
+    for my $venue_name (@_)
+    {
+        if (! $inserter->execute($venue_name, ""))
+        {
+            print "Could not load venue $venue_name:\n$DBI::errstr\n\n";
+        }
+    }
+
+    my $table = $db->selectall_hashref("SELECT venue_id, venue_name FROM venues", "venue_name");
+    my %mapping;
+
+    @mapping{keys %$table} = map $_->{venue_id}, values %$table;
+    return \%mapping;
+}
+
+# Populate the events table
+sub populate_events($@)
+{
+    my $venue_ids = shift;
+    my $inserter = $db->prepare('INSERT INTO events(event_id, venue_id, remindercode, title, title_phrase, reminder_phrase, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+
+    for (@_)
+    {
+        my $id    = $_->{id};
+        my $title = $_->{title};
+        my $venue = $_->{venue};
+        my $start = $_->{stime};
+        my $end   = $_->{etime};
+        my $code  = $_->{reminder};
+
+        if (! $inserter->execute($id, $venue_ids->{$venue}, $code, $title, "", "", $start, $end))
+        {
+            print "Could not load event $id:\n$DBI::errstr\n\n";
+        }
+    }
+}
+
+###
+# Main body of script
+###
+
+# Connect to our database...
+$db = DBI->connect("dbi:Pg:dbname=emf_reminders", '', '', {AutoCommit => 1, PrintError => 0, RaiseError => 0});
+
+# Check to see if there's any data in the database already...
+my $count = 0;
+
+while (my ($table, $field) = each %table_ids)
+{
+    $count += $db->selectrow_array("SELECT COUNT($field) FROM $table");
+}
+
+if ($count)
+{
+    if ($clear_existing)
+    {
+        # Empty out the existing data if we have permission
+        my $truncate = $db->prepare("TRUNCATE " . join(", ", keys %table_ids));
+        if (! $truncate || ! $truncate->execute())
+        {
+            print "Could not clear existing data:\n$DBI::errstr\n\n";
+            exit 1;
+        }
+    }
+    else
+    {
+        # ... or bail out if not
+        print "The database already contains data!\n\n";
+        print "Loading a new schedule requires deleting this existing data;\n";
+        print "to continue, re-run this script with the --clear-existing parameter.\n";
+        exit 1;
+    }
+}
+
+my $venues_ids = populate_venues(@venues);
+populate_events($venues_ids, @events);
