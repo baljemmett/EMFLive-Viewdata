@@ -22,10 +22,11 @@
     - `29`: All venues - ordering should be as listed above? 
     - `2n...` has individual event entries with back routing, can be created statically by schedule generator
 - `3`: Bar and Shop Prices
-    - `31`: Bar
-    - `32`: Cybar
-    - `33`: Shop
-    - Sub-pages under each of these for categories/'departments'
+    - `31`: Bar (taps and pumps)
+    - `32`: Bar (other)
+    - `33`: Cybar
+    - `34`: Shop
+    - Sub-pages under each of these for categories/'departments'?
 - `4`: Guestbook
     - `41`: Sign
     - `42`: View
@@ -37,18 +38,20 @@
 
 ## Outstanding TODO items
 
-As of 2024-03-07 16:00:
+As of 2024-04-19 01:55:
 
 - Parameterise nav messages etc. for consistency
 - General routing updates:
     - Decide on consistent scheme (maybe per section, but globally is better)
     - Update all navigation messages and routing tables
     - Do we have room for a second navigation line on event pages?
-- Bar/shop stock pages - need to see more example data for this, ideally
+    - route final page of schedules back to something - start or index?
 - Page `81`/`82` - About Viewdata/Telstar gateway - rewrite?  Service header?
 - cron jobs for automated updating
     - Schedule can be pulled hourly/*n* times a day/manually
     - Now/Next should update probably every 5 minutes if not every minute
+- expose family-friendly flag
+- handle huge fields in header block (e.g. 117051)
 
 ## Things to check upstream
 
@@ -56,3 +59,7 @@ As of 2024-03-07 16:00:
 - Exit pages aren't displayed before disconnecting (fixed 2024-03-02)
 - Disconnecting from gateway service doesn't return to local service
 - History stack / back nav bug? (fixed 2024-03-02)
+
+## Things to check in new schedule when available
+- Sanitisation of `attendees` field (e.g. `(none)`, `Many` in 2022 dataset)
+- Sanitisation of `cost` field (e.g. `£0`, `free` in 2022 dataset)
