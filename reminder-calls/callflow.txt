@@ -1,0 +1,45 @@
+Rough sketch of a potential call flow for reminder service:
+
+- "Welcome to the EMF 2024 reminder call service."
+- if user has reminders already set:
+  - "You have $n reminders set.  To set a new reminder, please press 1.  To review or cancel existing reminders, press 2.  To cancel all reminders, press 3."
+  - 1 -> fall through to set flow
+  - 2 -> go to modify flow
+  - 3 -> go to cancel-all flow
+  - 9 -> go to disable flow (???)
+  - 15 second timeout -> go to finish flow
+  - otherwise -> "I'm sorry, that response was not recognised." and repeat this branch
+- set flow:
+  - "Please enter your desired reminder call time, as four digits using the 24-hour clock, or press star followed by the six-digit reminder code for an event."
+  - get digit
+  - if star, go to event flow
+  - get three digits
+  - 15 second timeout -> "I'm sorry, that response was not recognised." and repeat flow
+  - parse four digit time
+  - if failed -> "I'm sorry, that time is not valid." and repeat flow
+  - check already set -> "You have already set a reminder for that time" and repeat flow
+  - "You have asked to set a reminder for $time; please press 1 to confirm, or hang up to cancel"
+  - 1 -> save, go to finish flow
+  - 15 second timeout -> go to finish flow
+- event flow:
+  - get six digits
+  - 15 second timeout -> "I'm sorry, that response was not recognised." and go to set flow
+  - look up six-digit code
+  - not found -> "I'm sorry, that reminder code was not recognised" and go to set flow
+  - check already set -> "You have already set a reminder for that event" and go to set flow
+  - "You have asked to set a reminder for the event entitled $title; please press 1 to confirm, or hang up to cancel"
+  - 1 -> save, finish flow
+  - 15 second timeout -> go to finish flow
+- modify flow:
+  - "You have the following reminders set."
+  - read next reminder
+  - "Press 1 to continue, or 2 to delete this reminder."
+  - 2 -> delete it, "That reminder has been cancelled."
+  - 1, or ?? second timeout -> loop until done
+  - go to finish flow
+- cancel-all flow:
+  - "Please press 3 to confirm."
+  - 3 -> delete all
+  - go to finish flow
+- finish flow:
+  - "Thank you for using the EMF 2024 reminder call service from microwavepizza.  You can call back at any time to add, review or cancel your reminders."

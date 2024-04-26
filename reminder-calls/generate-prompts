@@ -1,0 +1,38 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use SpeechSynthesizer;
+
+SpeechSynthesizer::create_directories("prompts");
+
+while (my $line = <DATA>)
+{
+    chomp $line;
+    my ($tag, $text) = split /:/, $line, 2;
+    
+    SpeechSynthesizer::generate($text, $tag);
+}
+
+__DATA__
+welcome: Welcome to the EMF 2024 reminder call service.
+you-have: You currently have
+reminders-set: reminders set.
+main-menu: To set a new reminder, please press 1.  To review or cancel your existing reminders, press 2.  To cancel all reminders, press 3.
+not-recognised: I'm sorry, that response was not recognised.
+enter-time: Please enter your desired reminder call time, as four digits using the 24-hour clock, or press star followed by the six-digit reminder code for an event.
+bad-time: I'm sorry, that is not a valid time.
+bad-code: I'm sorry, that reminder code was not recognised.
+already-set-time: You have already set a reminder for that time.
+already-set-event: You have already set a reminder for that event.
+set-for-time: You have asked for a reminder at
+set-for-event: You have asked for a reminder before the event entitled
+set-confirm: Please press 1 to confirm, or 2 to change your selection.
+reviewing: You have the following reminders set.
+review-prompt: Press 1 to continue, or 2 to cancel this reminder.
+no-more: You have no more reminders set.
+cancel-all: Please press 3 to confirm you wish to cancel all reminders.
+cancelled: That reminder has been cancelled.
+cancelled-all: All reminders have been cancelled.
+finished: Thank you for using the EMF 2024 reminder call service from microwavepizza.  You can call back at any time to add to, review or cancel your reminders.

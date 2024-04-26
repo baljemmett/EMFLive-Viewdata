@@ -1,0 +1,38 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use SpeechSynthesizer;
+
+SpeechSynthesizer::create_directories("numbers");
+
+for (0..59)
+{
+    my $text = sprintf("%02d", $_);
+    SpeechSynthesizer::generate($text, $text);
+}
+
+SpeechSynthesizer::create_directories("digits");
+
+for (0..9)
+{
+    my $text = $_;
+    SpeechSynthesizer::generate($text, $text);
+}
+
+for (qw(star hash))
+{
+    my $text = $_;
+    SpeechSynthesizer::generate($text, $text);
+}
+
+SpeechSynthesizer::create_directories("days");
+
+for (qw(Monday Tuesday Wednesday Thursday Friday Saturday Sunday))
+{
+    my $full = $_;
+    my $abbr = lc(substr($full, 0, 3));
+    
+    SpeechSynthesizer::generate($full, $abbr);
+}
