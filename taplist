@@ -113,7 +113,7 @@ sub by_id
 my %sections = (
     "Real Ale" => $taplist->{ales},
     "Real Cider" => $taplist->{ciders},
-    "Kegs" => $taplist->{kegs},
+    "Lager and Craft Kegs" => $taplist->{kegs},
 );
 
 my @header = (
@@ -122,7 +122,7 @@ my @header = (
     "",
 );
 
-my $frame = new TelstarFrame(300);
+my $frame = new TelstarFrame(31);
 my $paginator = new Paginator($frame,
 {
     header => \@header,

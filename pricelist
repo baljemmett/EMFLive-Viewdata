@@ -14,31 +14,62 @@ use Getopt::Long;
 
 my $directory = "newframes";
 my $year = 2022;
+
+my %captions = (
+    shop => "ESSENTIALS",
+    cybar => "COLD AS ICE",
+    bar => "ALSO SERVING",
+);
+
+my %straplines = (
+    shop => "Available from the shop",
+    cybar => "On sale in the cybar",
+    bar => "Other bar refreshment",
+);
+
+my %hidden_bar_departments = (
+    "Real Ale" => 1,
+    "Lager" => 1,
+    "Craft Keg" => 1,
+    "Real Cider" => 1,
+);
+
 my $shop = 0;
 my $cybar = 0;
+my $bar = 0;
+my $where;
 
 GetOptions("year=s" => \$year,
            "directory=s" => \$directory,
            "shop" => \$shop,
-           "cybar" => \$cybar)
-or die "Error in command line arguments.";
+           "cybar" => \$cybar,
+           "bar" => \$bar) or die "Error in command line arguments.";
 
 my $frame_number;
 my $filename;
 
-if ($shop && ! $cybar)
+if (($shop + $cybar + $bar) != 1)
 {
-    $frame_number = 302;
+    die "Specify one of --shop, --bar or --cybar";
+}
+
+if ($shop)
+{
+    $frame_number = 34;
     $filename = "shop.json";
+    $where = "shop";
 }
-elsif ($cybar && ! $shop)
+elsif ($cybar)
 {
-    $frame_number = 301;
+    $frame_number = 33;
     $filename = "cybar.json";
+    $where = "cybar";
 }
-else
+elsif ($bar)
 {
-    die "Specify either --shop or --cybar";
+    $frame_number = 32;
+    $filename = "stocktypes.json";
+    $where = "bar";
 }
 
 my $full_list;
@@ -179,6 +210,7 @@ sub by_manuf_name
 }
 
 my %sections = ();
+my %departments = ();
 
 # Scan full list and organise by department
 for my $key (keys %{$full_list})
@@ -187,11 +219,16 @@ for my $key (keys %{$full_list})
     {
         my $department = $item->{department}->{id};
         push @{$sections{$department}}, $item;
+
+        unless(exists $departments{$department})
+        {
+            $departments{$department} = $item->{department}->{description};
+        }
     }
 }
 
-my $caption = $shop ? "ESSENTIALS" : "COLD AS ICE";
-my $strap   = $shop ? "Available from the shop" : "On sale in the Cybar";
+my $caption = $captions{$where};
+my $strap   = $straplines{$where};
 
 my @header = (
     "[R][n][D][Y]$caption:[W]$strap",
@@ -219,21 +256,16 @@ my $order = $shop ? \&by_description : \&by_manuf_name;
 for my $section (sort keys %sections)
 {
     my $first = 1;
-    my $department = undef;
+
+    next if exists $hidden_bar_departments{$departments{$section}};
+
+    my $department = unidecode($departments{$section});
 
     for my $item (sort $order @{$sections{$section}})
     {
         next if ! defined $item->{price};
 
         my @section = ();
-
-        if (! defined $department)
-        {
-            $department = $item->{department}->{description};
-            $department =~ s/\N{U+2264}/<=/g;
-            $department =~ s/(\d\d% VAT)/$1 included/;
-            $department = unidecode($department);
-        }
 
         push @section, "[Y]$department" . ($first ? ":" : " (continued):");
         push @section, format_item($item);
