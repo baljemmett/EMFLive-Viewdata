@@ -95,7 +95,7 @@ sub format_item($)
 {
     my $product = shift;
 
-    my $right_width = $shop ? 7 : 13;   # "\x1F£19.99" is 7 chars, "\x1F£9.99/bottle" is 13 chars
+    my $right_width = $shop ? 7 : 14;   # "\x1F£19.99" is 7 chars, "\x1F£19.99/bottle" is 14 chars
     my $left_width = 39 - $right_width;
     my $low_stock_indicator = "\x1DLow stock!";
     my $indent = 2;
@@ -124,12 +124,13 @@ sub format_item($)
         $pricing = sprintf("\x1F#%s/%s", $product->{price}, $product->{sale_unit_name});
 
         $indent = length($manufacturer) + 1;
-        $indent = 2 if ($indent > 4);
+        $indent = 3 if ($indent > 12);
     }
 
     my $wrapper = Text::Wrapper->new(columns => $left_width - 1,
                                      par_start => "",
-                                     body_start => " "x$indent);
+                                     body_start => " "x$indent,
+                                     wrap_after => "\x1D\x1E\x1F");
 
     my @lines = split /\n/, $wrapper->wrap($description);
     my $in_name = $shop;
@@ -259,7 +260,10 @@ for my $section (sort keys %sections)
 
     next if exists $hidden_bar_departments{$departments{$section}};
 
-    my $department = unidecode($departments{$section});
+    my $department = $departments{$section};
+    $department =~ s/\N{U+2264}/<=/g;
+    $department =~ s/(\d\d% VAT)/$1 included/;
+    $department = unidecode($department);
 
     for my $item (sort $order @{$sections{$section}})
     {
