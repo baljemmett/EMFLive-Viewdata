@@ -38,15 +38,30 @@ reminder_add_time = function(caller, time)
     -- Finally we can convert the requested time into a full timestamp string
     local reminder_timestamp = os.date("%Y-%m-%d %H:%M:%S", reminder_time)
 
-    -- Read it back to the user, with today/tomorrow suffix for clarity
+    -- Read it back to the user, with today/tomorrow suffix for clarity;
+    -- special-case midnight, as well as 0001-0059 and the tops of hours.
     app.Playback("reminder-call/prompts/set-for-time")
-    app.Playback("reminder-call/numbers/" .. hours_str)
-    app.Playback("reminder-call/numbers/" .. minutes_str)
-    
-    if is_today then
-        app.Playback("reminder-call/days/tod")
+
+    if time == "0000" then
+        app.Playback("reminder-call/times/midnight")
     else
-        app.Playback("reminder-call/days/tom")
+        if hours == 0 then
+            app.Playback("reminder-call/times/double-oh")
+        else
+            app.Playback("reminder-call/numbers/" .. hours_str)
+        end
+
+        if minutes == 0 then
+            app.Playback("reminder-call/times/hundred")
+        else
+            app.Playback("reminder-call/numbers/" .. minutes_str)
+        end
+
+        if is_today then
+            app.Playback("reminder-call/days/tod")
+        else
+            app.Playback("reminder-call/days/tom")
+        end
     end
 
     -- Confirm they want to go ahead with this time

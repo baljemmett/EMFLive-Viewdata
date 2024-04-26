@@ -13,6 +13,12 @@ for (0..59)
     SpeechSynthesizer::generate($text, $text);
 }
 
+SpeechSynthesizer::create_directories("times");
+
+SpeechSynthesizer::generate("hundred", "hundred");
+SpeechSynthesizer::generate("midnight", "midnight");
+SpeechSynthesizer::generate("double oh", "double-oh");
+
 SpeechSynthesizer::create_directories("digits");
 
 for (0..9)
