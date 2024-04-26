@@ -76,7 +76,8 @@ sub paginate_text
 
     my $wrapper = Text::Wrapper->new(columns => $self->{width},
                                      par_start => $self->{prefix},
-                                     body_start => $self->{prefix});
+                                     body_start => $self->{prefix},
+                                     wrap_after => "-/1234567890");
 
     my @lines = split /\n/, $wrapper->wrap($text);
 
