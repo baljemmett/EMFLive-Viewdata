@@ -36,3 +36,4 @@ cancel-all: Please press 3 to confirm you wish to cancel all reminders.
 cancelled: That reminder has been cancelled.
 cancelled-all: All reminders have been cancelled.
 finished: Thank you for using the EMF 2024 reminder call service from microwavepizza.  You can call back at any time to add to, review or cancel your reminders.
+internal-error: Sorry, something has gone wrong. Your call cannot continue; please hang up and try again later.
