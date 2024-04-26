@@ -180,10 +180,39 @@ reminder_add = function(caller)
     end
 end;
 
+-- Get (and read out) the number of reminder calls currently pending for a user
+reminder_call_pending_count = function(caller)
+    local pending = channel.REMINDERCALLS_GetPendingReminderCountForUser(caller):get()
+
+    if pending == nil or pending == "" then pending = "0" end
+    pending = tonumber(pending)
+
+    if pending == 1 then
+        app.Playback("reminder-call/prompts/you-have-one-reminder-set")
+    elseif pending > 30 then
+        app.Playback("reminder-call/prompts/you-have-many-reminders-set")
+    elseif pending > 0 then
+        app.Playback("reminder-call/prompts/you-have")
+
+        if pending < 10 then
+            app.Playback("reminder-call/digits/" .. pending)
+        else
+            app.Playback("reminder-call/numbers/" .. pending)
+        end
+
+        app.Playback("reminder-call/prompts/reminders-set")
+    end
+
+    return pending
+end;
+
 -- Handle the top-level reminder call service prompts.
 reminder_call_service = function(caller)
     app.Playback("silence/1&reminder-call/prompts/welcome")
+
+    reminder_call_pending_count(caller)
     reminder_add(caller)
+
     app.Playback("reminder-call/prompts/finished")
 end;
 

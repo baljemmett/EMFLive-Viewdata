@@ -17,6 +17,8 @@ while (my $line = <DATA>)
 
 __DATA__
 welcome: Welcome to the EMF 2024 reminder call service.
+you-have-one-reminder-set: You currently have one reminder set.
+you-have-many-reminders-set: You currently have more than 30 reminders set.
 you-have: You currently have
 reminders-set: reminders set.
 main-menu: To set a new reminder, please press 1.  To review or cancel your existing reminders, press 2.  To cancel all reminders, press 3.
