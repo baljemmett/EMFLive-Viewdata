@@ -9,6 +9,7 @@ use List::Util qw/shuffle/;
 use Getopt::Long;
 
 use ScheduleReader;
+use SpeechSynthesizer;
  
 # Which year are we in, and where's the schedule file?
 my $year = 2022;
@@ -43,6 +44,60 @@ my %table_ids = (
 
 # Pre-declare database handle so subs can see it
 my $db;
+
+# Choose the correct preposition for a given venue
+sub get_preposition_for_venue
+{
+    my $venue = shift;
+    my $preposition = "in";
+    
+    $preposition = "on" if $venue =~ /Stage/;
+    $preposition = "in the" if $venue =~ /Youth|Bar|Lounge|Tent|smiths/;
+    $preposition = "at" if $venue =~ /AMSAT|Bomb|SEM/;
+    $preposition = "" if $venue =~ /^Outside/;
+
+    $preposition;
+}
+
+# Generate speech fragments for event titles.
+sub generate_event_title_files(@)
+{
+    SpeechSynthesizer::create_directories("titles");
+
+    for my $event (@_)
+    {
+        my $id    = $event->{id};
+        my $title = $event->{title};
+        my $file  = sprintf "%s-%04d", $year, $id;
+
+        SpeechSynthesizer::generate($title, $file);
+
+        $event->{title_file} = "titles/" . $file;
+    }
+}
+
+# Generate speech fragments for event reminders.
+sub generate_event_reminder_files(@)
+{
+    SpeechSynthesizer::create_directories("reminders");
+
+    for my $event (@_)
+    {
+        my $id    = $event->{id};
+        my $title = $event->{title};
+        my $where = $event->{venue};
+        my $what  = lc($event->{type});
+        my $whom  = $event->{by};
+        my $file  = sprintf "%s-%04d", $year, $id;
+
+        my $preposition = get_preposition_for_venue $where;
+        my $reminder    = "You asked to be reminded about the $what by $whom starting shortly $preposition $where:\n\n$title";
+
+        SpeechSynthesizer::generate($reminder, $file);
+
+        $event->{reminder_file} = "reminders/" . $file;
+    }
+}
 
 # Populate the venues table and return a hashref we can use to
 # map venue names to (internal) venue IDs later.
@@ -79,8 +134,10 @@ sub populate_events($@)
         my $start = $_->{stime};
         my $end   = $_->{etime};
         my $code  = $_->{reminder};
+        my $tfile = $_->{title_file};
+        my $rfile = $_->{reminder_file};
 
-        if (! $inserter->execute($id, $venue_ids->{$venue}, $code, $title, "", "", $start, $end))
+        if (! $inserter->execute($id, $venue_ids->{$venue}, $code, $title, $tfile, $rfile, $start, $end))
         {
             print "Could not load event $id:\n$DBI::errstr\n\n";
         }
@@ -125,4 +182,6 @@ if ($count)
 }
 
 my $venues_ids = populate_venues(@venues);
+generate_event_title_files(@events);
+generate_event_reminder_files(@events);
 populate_events($venues_ids, @events);

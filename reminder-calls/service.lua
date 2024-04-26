@@ -99,7 +99,21 @@ reminder_add_code = function(caller, code)
         app.Verbose(1, "Event lookup for code " .. code .. " found ID " .. event_id)
     end
 
-    -- Need to do readback and confirmation prompt here...
+    -- Now we can look for the title clip filename
+    local title = channel.REMINDERCALLS_EventTitleFilenameFromId(event_id):get()
+
+    if title == nil or title == "" then
+        app.Verbose(1, "Title filename lookup for event " .. event_id .. " failed; invalid?")
+        app.Playback("reminder-call/prompts/bad-code")
+        return false
+    else
+        app.Verbose(1, "Title filename lookup for event " .. event_id .. " found " .. title)
+    end
+
+    -- Read it out to the user and check if it's right
+    app.Playback("reminder-call/prompts/set-for-event")
+    app.Playback("reminder-call/" .. title)
+    if not reminder_confirm() then return false end
 
     -- Schedule the reminder call; time is computed up automatically
     local reminder_id = channel.REMINDERCALLS_ScheduleForEvent(caller, event_id):get()
