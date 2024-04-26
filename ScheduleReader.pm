@@ -117,19 +117,32 @@ sub from_file($)
     for (sort by_time @$schedule)
     {
         push @events, {
-            id    => $_->{"id"},
-            title => unidecode($_->{"title"}),
-            desc  => unidecode($_->{"description"}),
-            venue => $_->{"venue"},
-            type  => $event_types{$_->{"type"}},
-            by    => unidecode($_->{"speaker"}),
-            start => format_date($_->{"start_date"}),
-            end   => format_end_time($_->{"start_date"}, $_->{"end_date"}),
-            sdate => $_->{"start_date"},
-            edate => $_->{"end_date"},
-            stime => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
-            etime => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
+            id       => $_->{"id"},
+            title    => unidecode($_->{"title"}),
+            desc     => unidecode($_->{"description"}),
+            venue    => $_->{"venue"},
+            type     => $event_types{$_->{"type"}},
+            by       => unidecode($_->{"speaker"}),
+            cost     => $_->{"cost"} || "",
+            ages     => unidecode($_->{"age_range"} || ""),
+            cws      => unidecode($_->{"content_note"} || ""),
+            capacity => unidecode($_->{"attendees"} || ""),
+            start    => format_date($_->{"start_date"}),
+            end      => format_end_time($_->{"start_date"}, $_->{"end_date"}),
+            sdate    => $_->{"start_date"},
+            edate    => $_->{"end_date"},
+            stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
+            etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
         };
+
+        # Convert £ to # because the 80s were a horrible time to ASCII.
+        $events[-1]->{cost} =~ s/\x{a3}/#/g;
+
+        # Remove cost if it's one of various forms of free-ness
+        if ($events[-1]->{cost} =~ /^(free|none|no cost|#0)$/i)
+        {
+            $events[-1]->{cost} = "";
+        }
 
         # Pull the (start) day out into its own field for ease of access.
         # Account for logical midnight here, so that when we group by day

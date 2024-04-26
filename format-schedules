@@ -32,6 +32,21 @@ my $event_wrapper = Text::Wrapper->new(columns => 38);
 # Subroutines
 ###
 
+sub add_wrapped_event_field($$$)
+{
+	my ($frame, $field, $value) = @_;
+
+	my $field_wrapper = Text::Wrapper->new(columns => 38,
+	                                       par_start => "",
+	                                       body_start => " "x(2 + length $field));
+	my @wrapped_lines = split /\n/, $field_wrapper->wrap($field . ": " . $value);
+	my $wrapped_first = shift @wrapped_lines;
+	$wrapped_first =~ s/: /:[C]/;
+
+	$frame->add_line("[W]$wrapped_first");
+	map { $frame->add_line("[C]$_"); } @wrapped_lines;
+}
+
 # Generate the detail frames for an event
 sub generate_event_detail_frames($$$@)
 {
@@ -60,9 +75,34 @@ sub generate_event_detail_frames($$$@)
 	# And the event type and first line of speaker list
 	$frame->add_line("[W]$wrapped_first");
 
-	# Rest of the speaker list, if any, and a blank line
+	# Rest of the speaker list, if any
 	map { $frame->add_line("[C]$_"); } @wrapped_by;
 	$frame->add_line("");
+
+	# Cost, age range, max. attendees (as appropriate)
+	add_wrapped_event_field($frame, "Cost", $event->{cost}) if $event->{cost};
+	add_wrapped_event_field($frame, "Ages", $event->{ages}) if $event->{ages};
+	add_wrapped_event_field($frame, "Capacity", $event->{capacity}) if $event->{capacity};
+
+	# A blank line to set off the header block, if needed
+	$frame->add_line("") if $event->{cost} || $event->{ages} || $event->{capacity};
+
+	# Content note (if any) before description
+	if (defined $event->{cws} && $event->{cws} ne "")
+	{
+		my @wrapped_cws = split /\n/, $event_wrapper->wrap("Content notes: " . $event->{cws});
+		my $wrapped_first = shift @wrapped_cws;
+		$wrapped_first =~ s/: /:[W]/;
+
+		$frame->add_line("[Y]$wrapped_first");
+		map { $frame->add_line("[W]$_"); } @wrapped_cws;
+		$frame->add_line("");
+	}
+
+	if ($frame->count_lines() > 22)
+	{
+		print "Event $event->{id} has header block exceeding a single frame.\n";
+	}
 
 	# And finally we can add the complete event description
 	# which could easily span several pages.
