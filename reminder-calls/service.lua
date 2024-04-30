@@ -183,6 +183,7 @@ end;
 -- Read out the details of a specified reminder
 reminder_review_one = function(caller, number, reminder_id)
     local time = channel.REMINDERCALLS_ReminderTimeFromId(reminder_id):get()
+    local event = channel.REMINDERCALLS_EventIdFromReminderId(reminder_id):get()
 
     -- This is really a bit grotty but if we try to return multiple columns
     -- from the SELECT query, Asterisk gives us a comma-separated list...
@@ -220,6 +221,16 @@ reminder_review_one = function(caller, number, reminder_id)
             app.Playback("reminder-call/times/hundred")
         else
             app.Playback("reminder-call/numbers/" .. minutes)
+        end
+    end
+
+    -- Does it have an associated event to read out?
+    if event ~= nil and event ~= "" then
+        local title = channel.REMINDERCALLS_EventTitleFilenameFromId(event):get()
+
+        if title ~= nil and title ~= "" then
+            app.Playback("reminder-call/prompts/reminder-event")
+            app.Playback("reminder-call/" .. title)
         end
     end
 end;
