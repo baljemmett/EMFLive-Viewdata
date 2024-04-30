@@ -180,6 +180,120 @@ reminder_add = function(caller)
     end
 end;
 
+-- Read out the details of a specified reminder
+reminder_review_one = function(caller, number, reminder_id)
+    local time = channel.REMINDERCALLS_ReminderTimeFromId(reminder_id):get()
+
+    -- This is really a bit grotty but if we try to return multiple columns
+    -- from the SELECT query, Asterisk gives us a comma-separated list...
+    local day = string.sub(time, 1, 3)
+    local hours = string.sub(time, 5, 6)
+    local minutes = string.sub(time, 8, 9)
+
+    -- Spit out the details for debugging
+    app.Verbose(1, "Reminder " .. number .. " for caller " .. caller .. ", id " .. reminder_id .. ":")
+    app.Verbose(1, day)
+    app.Verbose(1, hours)
+    app.Verbose(1, minutes)
+
+    -- Read out which number this is in the list (before any cancellations)
+    app.Playback("reminder-call/prompts/reminder-number")
+    if number < 10 then
+        app.Playback("reminder-call/digits/" .. number)
+    else
+        app.Playback("reminder-call/numbers/" .. number)
+    end
+
+    --- ... and the day and time
+    app.Playback("reminder-call/days/" .. day)
+
+    if hours == 0 and minutes == 0 then
+        app.Playback("reminder-call/times/midnight")
+    else
+        if hours == 0 then
+            app.Playback("reminder-call/times/double-oh")
+        else
+            app.Playback("reminder-call/numbers/" .. hours)
+        end
+
+        if minutes == 0 then
+            app.Playback("reminder-call/times/hundred")
+        else
+            app.Playback("reminder-call/numbers/" .. minutes)
+        end
+    end
+end;
+
+-- Review all reminder set for a user, offering the option to delete each one
+reminder_review_all = function(caller)
+    local query_id = channel.REMINDERCALLS_GetPendingReminderIdsForUser(caller):get()
+    local reminder_id = channel.ODBC_FETCH(query_id):get()
+    local number = 1
+
+    -- Keep going until we run out of rows *or* we hit the sixtieth reminder,
+    -- because we only have the numbers 0..59 in our vocabulary.
+    while number < 60 and channel["ODBC_FETCH_STATUS"]:get() == "SUCCESS" do
+        -- Read this reminder out to the user
+        reminder_review_one(caller, number, reminder_id)
+
+        -- Give them the prompt to cancel it
+        app.Read("menu", "reminder-call/prompts/review-prompt", 1, "st(5)")
+        if channel["menu"]:get() == "2" then
+            app.Verbose("... cancelling reminder " .. reminder_id)
+            channel.REMINDERCALLS_CancelReminderById(reminder_id):set("")
+
+            local log = "Cancelled by caller (" .. caller .. ")."
+            channel.REMINDERCALLS_AddHistoryEntry(reminder_id):set(log)
+
+            app.Playback("reminder-call/prompts/cancelled")
+        end
+    
+        -- Move on to the next reminder
+        reminder_id = channel.ODBC_FETCH(query_id):get()
+        number = number + 1
+    end
+
+    channel.ODBCFinish(query_id)
+    return false
+end;
+
+-- Cancel all outstanding reminders for a user, after confirmation
+reminder_cancel_all = function(caller)
+    -- Give the user a chance to bail out if this was a mistake
+    app.Read("confirm", "reminder-call/prompts/cancel-all", 1, "s")
+    if channel["confirm"]:get() ~= "3" then return false end
+
+    app.Verbose("Caller " .. caller .. " cancelling all reminders")
+
+    -- We cancel the reminders one-by-one so that we can create the correct
+    -- set of history records, but we'll cap it at 100 rows so the script
+    -- doesn't spin indefinitely if I mess up the ODBC fetching...
+    local max_iterations = 100
+
+    -- Get the first pending reminder for the user
+    local query_id = channel.REMINDERCALLS_GetPendingReminderIdsForUser(caller):get()
+    local reminder_id = channel.ODBC_FETCH(query_id):get()
+
+    while max_iterations > 0 and channel["ODBC_FETCH_STATUS"]:get() == "SUCCESS" do
+        -- Cancel this reminder...
+        app.Verbose("... cancelling reminder " .. reminder_id)
+        channel.REMINDERCALLS_CancelReminderById(reminder_id):set("")
+
+        -- ... log what we did...
+        local log = "Cancelled by caller (" .. caller .. ") as part a cancel-all request."
+        channel.REMINDERCALLS_AddHistoryEntry(reminder_id):set(log)
+
+        -- ... and look for another one
+        reminder_id = channel.ODBC_FETCH(query_id):get()
+        max_iterations = max_iterations - 1
+    end
+
+    channel.ODBCFinish(query_id)
+    
+    app.Playback("reminder-call/prompts/cancelled-all")
+    return true
+end;
+
 -- Get (and read out) the number of reminder calls currently pending for a user
 reminder_call_pending_count = function(caller)
     local pending = channel.REMINDERCALLS_GetPendingReminderCountForUser(caller):get()
@@ -206,12 +320,41 @@ reminder_call_pending_count = function(caller)
     return pending
 end;
 
+-- Main menu to handle callers who already have reminders set.
+-- Returns true when done, or false if we need to loop back here.
+reminder_call_menu = function(caller)
+    app.Read("menu", "reminder-call/prompts/main-menu", 1, "s")
+
+    local status = channel["READSTATUS"]:get()
+    local menu = channel["menu"]:get()
+
+    -- If the Read() aborted due to failure, give up immediately
+    if status == "ERROR" or status == "HANGUP" then
+        return true
+    elseif menu == "1" then
+        reminder_add(caller)
+        return true
+    elseif menu == "2" then
+        return reminder_review_all(caller)
+    elseif menu == "3" then
+        return reminder_cancel_all(caller)
+    else
+        app.Playback("reminder-call/prompts/not-recognised")
+        return false
+    end
+end;
+
 -- Handle the top-level reminder call service prompts.
 reminder_call_service = function(caller)
     app.Playback("silence/1&reminder-call/prompts/welcome")
 
-    reminder_call_pending_count(caller)
-    reminder_add(caller)
+    if reminder_call_pending_count(caller) == 0 then
+        reminder_add(caller)
+    else
+        while not reminder_call_menu(caller) do
+            reminder_call_pending_count(caller)
+        end
+    end
 
     app.Playback("reminder-call/prompts/finished")
 end;

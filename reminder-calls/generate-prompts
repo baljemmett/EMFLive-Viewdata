@@ -32,6 +32,7 @@ set-for-time: You have asked for a reminder at
 set-for-event: You have asked for a reminder before the event entitled
 set-confirm: Please press 1 to confirm, or 2 to change your selection.
 reviewing: You have the following reminders set.
+reminder-number: Reminder
 review-prompt: Press 1 to continue, or 2 to cancel this reminder.
 no-more: You have no more reminders set.
 cancel-all: Please press 3 to confirm you wish to cancel all reminders.
