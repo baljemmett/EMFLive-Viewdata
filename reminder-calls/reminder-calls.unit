@@ -1,0 +1,18 @@
+# Designed to be installed in ~/.config/systemd/user/reminder-calls.unit
+# Remember to enable lingering for the user: `loginctl enable-linger $USERNAME`
+#
+# Alternatively install as system-wide config in /etc/systemd/system
+# but remember to change %h herein...
+
+[Unit]
+Description=Places outstanding reminder calls
+Wants=reminder-calls.timer
+
+[Service]
+Type=oneshot
+# SupplementaryGroups=asterisk
+WorkingDirectory=%h/reminder-calls
+ExecStart=%h/reminder-calls/despatch-reminders
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+# Designed to be installed in ~/.config/systemd/user/reminder-calls.timer
+# Remember to enable lingering for the user: `loginctl enable-linger $USERNAME`
+#
+# Alternatively install as system-wide config in /etc/systemd/system
+# but remember to change %h herein...
+
+[Unit]
+Description=Automatically places pending reminder calls every minute
+Requires=reminder-calls.service
+
+[Timer]
+Unit=reminder-calls.service
+OnCalendar=minutely
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

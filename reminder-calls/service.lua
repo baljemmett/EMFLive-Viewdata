@@ -377,3 +377,67 @@ reminder_extension = function(ctx, ext)
     reminder_call_service(caller)
     app.Hangup()
 end;
+
+-- Callback extension - to be invoked from a call file
+reminder_callback = function(ctx, ext)
+    reminder_id = channel.ReminderId:get()
+
+    app.Playback("silence/1")
+
+    if reminder_id == nil or reminder_id == "" then
+        app.Verbose(1, "Callback attempted without valid reminder ID")
+        app.Playback("reminder-call/prompts/internal-error")
+        app.Hangup()
+        return
+    end
+
+    app.Verbose(1, "Reminder callback for reminder ID " .. reminder_id)
+
+    local time = channel.REMINDERCALLS_ReminderTimeFromId(reminder_id):get()
+    local event = channel.REMINDERCALLS_EventIdFromReminderId(reminder_id):get()
+
+    if event ~= nil and event ~= "" then
+        -- This is a reminder for an event, so find the announcement
+        -- filename and play it out
+        local title = channel.REMINDERCALLS_EventReminderFilenameFromId(event):get()
+
+        if title ~= nil and title ~= "" then
+            app.Playback("reminder-call/" .. title)
+        end
+    elseif time ~= nil and time ~= "" then
+        -- This is a reminder for a time, so announce that and the
+        -- time it was requested for.
+        app.Playback("reminder-call/prompts/set-for-time")
+
+        -- This is really a bit grotty but if we try to return multiple columns
+        -- from the SELECT query, Asterisk gives us a comma-separated list...
+        local hours = string.sub(time, 5, 6)
+        local minutes = string.sub(time, 8, 9)
+
+        if hours == 0 and minutes == 0 then
+            app.Playback("reminder-call/times/midnight")
+        else
+            if hours == 0 then
+                app.Playback("reminder-call/times/double-oh")
+            else
+                app.Playback("reminder-call/numbers/" .. hours)
+            end
+
+            if minutes == 0 then
+                app.Playback("reminder-call/times/hundred")
+            else
+                app.Playback("reminder-call/numbers/" .. minutes)
+            end
+        end
+    else
+        -- Couldn't find any details about the reminder ID?!
+        app.Verbose(1, "Callback attempted but reminder ID lookup failed")
+        app.Playback("reminder-call/prompts/internal-error")
+        app.Hangup()
+        return
+    end
+
+    app.Playback("reminder-call/prompts/finished")
+    app.Playback("silence/1")
+    app.Hangup()
+end;
