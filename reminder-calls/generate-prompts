@@ -41,3 +41,5 @@ cancelled: That reminder has been cancelled.
 cancelled-all: All reminders have been cancelled.
 finished: Thank you for using the EMF 2024 reminder call service from microwavepizza.  You can call back at any time to add to, review or cancel your reminders.
 internal-error: Sorry, something has gone wrong. Your call cannot continue; please hang up and try again later.
+internal-error-outgoing: This is the EMF 2024 reminder call service. Unfortunately something has gone wrong; we know we were supposed to call you now, but not why. We apologise for the inconvenience.
+time-message: This is your requested reminder call.  It is now

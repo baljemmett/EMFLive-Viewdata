@@ -386,7 +386,7 @@ reminder_callback = function(ctx, ext)
 
     if reminder_id == nil or reminder_id == "" then
         app.Verbose(1, "Callback attempted without valid reminder ID")
-        app.Playback("reminder-call/prompts/internal-error")
+        app.Playback("reminder-call/prompts/internal-error-outgoing")
         app.Hangup()
         return
     end
@@ -407,7 +407,7 @@ reminder_callback = function(ctx, ext)
     elseif time ~= nil and time ~= "" then
         -- This is a reminder for a time, so announce that and the
         -- time it was requested for.
-        app.Playback("reminder-call/prompts/set-for-time")
+        app.Playback("reminder-call/prompts/time-message")
 
         -- This is really a bit grotty but if we try to return multiple columns
         -- from the SELECT query, Asterisk gives us a comma-separated list...
@@ -432,7 +432,7 @@ reminder_callback = function(ctx, ext)
     else
         -- Couldn't find any details about the reminder ID?!
         app.Verbose(1, "Callback attempted but reminder ID lookup failed")
-        app.Playback("reminder-call/prompts/internal-error")
+        app.Playback("reminder-call/prompts/internal-error-outgoing")
         app.Hangup()
         return
     end
