@@ -4,6 +4,50 @@ reminder_confirm = function()
     return channel["confirm"]:get() == "1"
 end;
 
+-- Read out a time (hours and minutes as two-digit strings) 
+-- with optional day (mon-fri, tod, tom - nil or "" to skip)
+reminder_read_time = function(day, hours, minutes)
+    -- Simplifies the comparison logic!
+    if day == nil then day = "" end
+
+    local midnight = (hours == "00" and minutes == "00")
+    local named_day = (day ~= "" and day ~= "tod" and day ~= "tom")
+
+    -- Day comes before the time if it's an actual day name,
+    -- unless the time is midnight.
+    if named_day and not midnight then
+        app.Playback("reminder-call/days/" .. day)
+    end
+
+    -- Special case for midnight isntead of double-oh hundred (?)
+    if midnight then
+        app.Playback("reminder-call/times/midnight")
+
+        -- Day name comes after 'midnight' if it's an actual day name.
+        if named_day then app.Playback("reminder-call/days/" .. day) end
+     else
+        -- Special case for the hour after midnight (oh-oh sounds silly)
+        if hours == "00" then
+            app.Playback("reminder-call/times/double-oh")
+        else
+            app.Playback("reminder-call/numbers/" .. hours)
+        end
+
+        -- Special case for the top of an hour, same reason
+        if minutes == "00" then
+            app.Playback("reminder-call/times/hundred")
+        else
+            app.Playback("reminder-call/numbers/" .. minutes)
+        end
+
+        -- 'Today' or 'tomorrow' indicators come after the time except
+        -- at midnight because that will always lie between the two.
+        if day == "tod" or day == "tom" then
+            app.Playback("reminder-call/days/" .. day)
+        end
+    end
+end;
+
 -- Handle the add-reminder-by-time flow for a caller and their requested time.
 reminder_add_time = function(caller, time)
     -- Parse the four-digit time into hours and minutes, as strings and ints
@@ -28,41 +72,19 @@ reminder_add_time = function(caller, time)
     reminder.sec  = 0
 
     local reminder_time = os.time(reminder) -- convert copy back to time_t
-    local is_today = true
+    local today_tomorrow = "tod"
 
     if (reminder_time <= now_time) then     -- has time already passed?
-        is_today = false                    -- if so, make it tomorrow
+        today_tomorrow = "tom"              -- if so, make it tomorrow
         reminder_time = reminder_time + 24 * 60 * 60
     end
 
     -- Finally we can convert the requested time into a full timestamp string
     local reminder_timestamp = os.date("%Y-%m-%d %H:%M:%S", reminder_time)
 
-    -- Read it back to the user, with today/tomorrow suffix for clarity;
-    -- special-case midnight, as well as 0001-0059 and the tops of hours.
+    -- Read it back to the user, with today/tomorrow suffix for clarity
     app.Playback("reminder-call/prompts/set-for-time")
-
-    if time == "0000" then
-        app.Playback("reminder-call/times/midnight")
-    else
-        if hours == 0 then
-            app.Playback("reminder-call/times/double-oh")
-        else
-            app.Playback("reminder-call/numbers/" .. hours_str)
-        end
-
-        if minutes == 0 then
-            app.Playback("reminder-call/times/hundred")
-        else
-            app.Playback("reminder-call/numbers/" .. minutes_str)
-        end
-
-        if is_today then
-            app.Playback("reminder-call/days/tod")
-        else
-            app.Playback("reminder-call/days/tom")
-        end
-    end
+    reminder_read_time(today_tomorrow, hours_str, minutes_str)
 
     -- Confirm they want to go ahead with this time
     if not reminder_confirm() then return false end
@@ -206,23 +228,7 @@ reminder_review_one = function(caller, number, reminder_id)
     end
 
     --- ... and the day and time
-    app.Playback("reminder-call/days/" .. day)
-
-    if hours == 0 and minutes == 0 then
-        app.Playback("reminder-call/times/midnight")
-    else
-        if hours == 0 then
-            app.Playback("reminder-call/times/double-oh")
-        else
-            app.Playback("reminder-call/numbers/" .. hours)
-        end
-
-        if minutes == 0 then
-            app.Playback("reminder-call/times/hundred")
-        else
-            app.Playback("reminder-call/numbers/" .. minutes)
-        end
-    end
+    reminder_read_time(day, hours, minutes)
 
     -- Does it have an associated event to read out?
     if event ~= nil and event ~= "" then
@@ -414,21 +420,8 @@ reminder_callback = function(ctx, ext)
         local hours = string.sub(time, 5, 6)
         local minutes = string.sub(time, 8, 9)
 
-        if hours == 0 and minutes == 0 then
-            app.Playback("reminder-call/times/midnight")
-        else
-            if hours == 0 then
-                app.Playback("reminder-call/times/double-oh")
-            else
-                app.Playback("reminder-call/numbers/" .. hours)
-            end
-
-            if minutes == 0 then
-                app.Playback("reminder-call/times/hundred")
-            else
-                app.Playback("reminder-call/numbers/" .. minutes)
-            end
-        end
+        -- Read out the time but without a day name or today/tomorrow suffix
+        reminder_read_time(nil, hours, minutes)
     else
         -- Couldn't find any details about the reminder ID?!
         app.Verbose(1, "Callback attempted but reminder ID lookup failed")
