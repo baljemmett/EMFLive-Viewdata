@@ -53,7 +53,7 @@ create table reminders (
 );
 
 create index reminders_time_status on reminders(reminder_time, status);
-create index reminders_phone_status on reminders(phone_number, status);
+create index reminders_phone_time_status on reminders(phone_number, status, reminder_time);
 
 -- A basic log of changes to all reminder requests, for debugging etc.
 --      history_id
@@ -68,3 +68,8 @@ create table history (
 );
 
 create index history_reminder on history(reminder_id);
+
+-- Set timezone (because the server is hopefully running in UTC!) and
+-- allow the 'asterisk' user to do what it needs to do.
+alter database emf_reminders set timezone to 'Europe/London';
+grant select, insert, update, delete, truncate on all tables in schema public to asterisk;
