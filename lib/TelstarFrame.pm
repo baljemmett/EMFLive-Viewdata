@@ -53,6 +53,20 @@ sub count_lines
     scalar @{$self->{content}{lines}};
 }
 
+# Is a given line an exact multiple of the screen width?
+sub is_exact_line_width
+{
+    my $text = shift;
+
+    return 0 if length($text) == 0;
+
+    # Various markup codes take up a character cell in the output
+    # so convert them to spaces to the purposes of length checking...
+    $text =~ s/\[([WRGBCMYwrgbcmyFSNDn-]|_[-+])\]/ /g;
+
+    return length($text) % 40 == 0;
+}
+
 # Write the frame out to a file in an (optional) directory; defaults
 # to the current directory if not provided.  Filename will be based
 # on the frame number and subpage letter.
@@ -61,8 +75,12 @@ sub write
     my ($self, $dir) = @_;
 
     my %output = %{dclone $self};
-    
-    $output{content}{data} = join "\r\n", @{$output{content}{lines}};
+
+    my @lines = @{$output{content}{lines}};
+
+    map { $_ .= "\r\n" unless is_exact_line_width($_) } @lines;
+    $output{content}{data} = join "", @lines;
+
     delete $output{content}{lines};
     delete $output{pid}{sequential};
 
