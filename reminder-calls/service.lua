@@ -379,7 +379,7 @@ end;
 -- Wrapper to be called from the context/extension table entry.
 reminder_extension = function(ctx, ext)
     caller = channel.CALLERID("num"):get()
-    app.Answer()
+    app.Answer(250)
     reminder_call_service(caller)
     app.Hangup()
 end;
