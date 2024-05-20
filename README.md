@@ -1,5 +1,7 @@
 # EMF Live Viewdata System
 
+This is a Viewdata service for Electromagnetic Field 2024, based on John Newcombe's Telstar system.  It's very much a spare-time project that I originally started putting together so that I could have a Viewdata terminal in my tent, but there has been sufficient interest from other attendees that it'll be made generally available thanks to CuTEL.  It may also be on display in the ECHQ marquee if our terminals hold out!
+
 ## Frame Organisation
 
 - `0`: Main index (Telstar default, is a redirect to `9`, can be overridden in config but terminal might send `*0#` from a dedicated key? Check this!)
@@ -27,18 +29,25 @@
     - `33`: Cybar
     - `34`: Shop
     - Sub-pages under each of these for categories/'departments'?
+    - Include bar sessions somewhere?
 - `4`: Guestbook
     - `41`: Sign
     - `42`: View
     - `49`: Terms/privacy policy
+- `5`: Phonebook
 - `8`: About
     - `81`: About Viewdata
     - `82`: Telstar gateway
+    - `83`: Reminder call service
 - `9`: Main index (Telstar's default is created here)
+    - `90`: Logout page
+    - `901`: System status
+    - `99`: Welcome page
+    - `990`: Full index
 
 ## Outstanding TODO items
 
-As of 2024-04-19 01:55:
+As of 2024-05-15 01:30:
 
 - Parameterise nav messages etc. for consistency
 - General routing updates:
@@ -47,15 +56,19 @@ As of 2024-04-19 01:55:
     - Do we have room for a second navigation line on event pages?
     - route final page of schedules back to something - start or index?
 - Page `81`/`82` - About Viewdata/Telstar gateway - rewrite?  Service header?
+- Page `83` - detail reminder call service
+- Page `990` - full index
+- Page `901` - add stats?
 - cron jobs for automated updating
     - Schedule can be pulled hourly/*n* times a day/manually
     - Now/Next should update probably every 5 minutes if not every minute
 - expose family-friendly flag
 - handle huge fields in header block (e.g. 117051)
+- Dockerise server with guestbook response handler etc.
 
 ## Things to check upstream
 
-- Routing: any way to route to sub-frame?  Looks like no, but can work around this with numbered subpages instead.
+- Routing: any way to route to sub-frame?  Looks like no, but can work around this with numbered subpages instead (implemented 2022-03-04).
 - Exit pages aren't displayed before disconnecting (fixed 2024-03-02)
 - Disconnecting from gateway service doesn't return to local service
 - History stack / back nav bug? (fixed 2024-03-02)
