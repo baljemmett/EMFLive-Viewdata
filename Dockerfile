@@ -3,6 +3,7 @@ LABEL maintainer="Ben A L Jemmett <emflive@microwavepizza.co.uk>"
 
 RUN apt-get -y update \
         && apt-get -y install \
+        libmail-sendeasy-perl \
         libtext-wrapper-perl \
         libtext-unidecode-perl \
         && rm -rf /var/lib/apt/lists/*

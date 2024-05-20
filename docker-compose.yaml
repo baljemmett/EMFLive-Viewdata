@@ -1,14 +1,16 @@
 version: "3.3"
 services:
   telstar-01:
-    container_name: "telstar-server"
-    image: "johnnewcombe/telstar"
+    container_name: "telstar-primary"
+    image: "verity.microwavepizza.co.uk/emflive"
     command: "server --port 8086"
     ports:
       - target: 8086
         published: 8086
     networks:
       - telstar-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - type: volume
         source: telstar-volume
@@ -18,15 +20,20 @@ services:
     environment:
       - TELSTAR_SERVER_DISPLAY_NAME=CERULEAN
       - TELSTAR_DBCOLLECTION=PRIMARY
+      - EMAIL_SERVER=host.docker.internal
+      - EMAIL_FROM=EMF Live
+      - EMAIL_TO=[fill this in]
   telstar-02:
     container_name: "telstar-secondary"
-    image: "johnnewcombe/telstar"
+    image: "verity.microwavepizza.co.uk/emflive"
     command: "server --port 8087 --init"
     ports:
       - target: 8087
         published: 8087
     networks:
       - telstar-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - type: volume
         source: telstar-volume
@@ -36,6 +43,9 @@ services:
     environment:
       - TELSTAR_SERVER_DISPLAY_NAME=COBALT
       - TELSTAR_DBCOLLECTION=SECONDARY
+      - EMAIL_SERVER=host.docker.internal
+      - EMAIL_FROM=EMF Live (Development)
+      - EMAIL_TO=[fill this in]
   telstar-api:
     container_name: "telstar-api"
     image: "johnnewcombe/telstar"

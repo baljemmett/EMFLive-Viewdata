@@ -6,6 +6,7 @@ use warnings;
 use Data::Dumper;
 use JSON::PP;
 use POSIX qw(strftime);
+use Mail::SendEasy;
 
 my $filename = "guestbook-entries.json";
 my $tempname = "guestbook-temp-$$.json";
@@ -96,3 +97,35 @@ close $output;
 
 # ... and rename it over the old one
 rename $tempname, $filename or die "Cannot rename $tempname to $filename: $!";
+
+# If mail settings are configured, notify admin of new post.
+if ($ENV{MAIL_SERVER} && $ENV{MAIL_FROM} && $ENV{MAIL_TO})
+{
+    my $mail = join("\n",
+        "A new guestbook entry has been added to EMF Live:",
+        "",
+        "From: $name",
+        @message
+    );
+
+    my $status = Mail::SendEasy::send(
+        smtp => $ENV{MAIL_SERVER},
+        from => $ENV{MAIL_FROM},
+        from_title => 'EMF Live Guestbook',
+        to => $ENV{MAIL_TO},
+        to_title => 'EMF Live Admin',
+        subject => 'New guestbook entry added',
+        msg => $mail);
+
+    # We can't really do anything with an error return here, since
+    # we've posted the message successfully but returning an error
+    # status will show the user the 'whoops it broke' screen.  Welp.
+    if ($status)
+    {
+        print "Notification mail sent successfully.\n";
+    }
+    else
+    {
+        print "Failed to send notification mail:\n", Mail::SendEasy::error;
+    }
+}
