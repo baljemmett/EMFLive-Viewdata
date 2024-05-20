@@ -8,18 +8,21 @@ set -ef
 # Lowercase the environment variable to use as a parameter for telstar-util
 DATABASE=${TELSTAR_DBCOLLECTION,,?}
 
+# Where are we?
+TELSTARDIR=$(dirname $(realpath $0))
+
 # Set up the Perl environment
-cd $(dirname $0)
-PERL5LIB=.${PERL5LIB:+:$PERL5LIB}
+PERL5LIB=$TELSTARDIR/lib${PERL5LIB:+:$PERL5LIB}
 export PERL5LIB
 
 # Update the guestbook and generate frames
-[ $# == 0 ] || ./sign-guestbook --sign "$@"
-./render-guestbook
+cd $TELSTARDIR/volume
+[ $# == 0 ] || ../sign-guestbook --sign "$@"
+../render-guestbook
 
 # Push them into Telstar via the API
-./telstar-util login telstar-api:8001 2222222222 1234
-./telstar-util addframes telstar-api:8001 guestbook-frames ${DATABASE:-primary}
+../telstar-util login telstar-api:8001 2222222222 1234
+../telstar-util addframes telstar-api:8001 guestbook-frames ${DATABASE:-primary}
 
 # Tidy up
 rm -r telstar-util.tok guestbook-frames
