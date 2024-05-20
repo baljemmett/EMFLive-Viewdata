@@ -25,6 +25,7 @@ if (@ARGV < 1 || $ARGV[0] eq "--help" || $ARGV[0] eq "-h")
 }
 
 my $name = shift @ARGV;
+$name =~ s/\s+$//;
 
 # Create an empty guestbook, replacing whatever's already there?
 if ($name eq "--init" || $name eq "-i")
