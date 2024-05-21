@@ -72,7 +72,22 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=mongoadmin
       - MONGO_INITDB_ROOT_PASSWORD=secret
+  asterisk:
+    container_name: "emflive-asterisk"
+    image: "verity.microwavepizza.co.uk/emflive-asterisk"
+    network_mode: host
+    secrets:
+      - pgpass
+      - pg_service.conf
+      - odbc.ini
 networks:
   telstar-network:
 volumes:
   telstar-volume:
+secrets:
+  pgpass:
+    file: secrets/pgpass
+  pg_service.conf:
+    file: secrets/pg_service.conf
+  odbc.ini:
+    file: secrets/odbc.ini

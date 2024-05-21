@@ -1,0 +1,12 @@
+-- Hook up the reminder call scripts to the dialplan
+dofile("/opt/remindercalls/service.lua")
+
+extensions = {
+    emf_inbound = {
+        ["remindercalls"] = reminder_extension;
+    };
+
+    emf_outbound = {
+        ["remindercalls"] = reminder_callback;
+    };
+}
