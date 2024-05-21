@@ -2,3 +2,5 @@ analysis/
 working/
 src/
 reminder-calls/sound-files/
+telstar-util
+telstar-util.tok

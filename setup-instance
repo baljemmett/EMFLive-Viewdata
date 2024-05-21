@@ -2,7 +2,7 @@
 
 set -e
 
-DATABASE=secondary
+DATABASE=${1:-secondary}
 SERVER=localhost:8001
 USERNAME=2222222222
 PASSWORD=1234

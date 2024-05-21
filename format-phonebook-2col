@@ -1,0 +1,143 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use JSON::PP;
+use Text::Unidecode;
+use Text::Wrapper;
+use TelstarFrame;
+use Paginator;
+use Getopt::Long;
+
+my $directory = "newframes";
+my $year = 2022;
+my $frame_number = 702;
+
+GetOptions("year=s" => \$year,
+           "directory=s" => \$directory) or die "Error in command line arguments.";
+
+# Slurp up the phonebook...
+my $filename = "phonebook.json";
+my $full_list;
+
+if (open my $input, "<", $filename)
+{
+    local $/ = undef;
+    $full_list = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+# ... set up our root frame and pagination...
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+my @header = (
+    "[R][n][D][Y]PHONE BOOK:[W]Not Available in Yellow",
+    "",
+    "",
+);
+
+my $frame = new TelstarFrame($frame_number);
+my $paginator = new Paginator($frame,
+{
+    header => \@header,
+    continues => "",
+    continued => ""
+});
+
+# We're going to use the ASCII separator-characters trick to encode attribute
+# changes, since an attribute change takes up a character cell but the markup
+# for them takes up three which'll screw up line length calculations...
+my $wrapper = Text::Wrapper->new(columns => 20,
+                                 par_start => "\x1D",
+                                 body_start => " "x6,
+                                 wrap_after => "\x1D\x1E/-");
+
+# Sort names into columns with a maximum height, ordered alphabetically
+my $current_letter = "";
+my @columns = ([]);
+my $height = 18;
+
+sub by_name
+{
+    uc($a->{label}) cmp uc($b->{label});
+}
+
+for my $entry (sort by_name @$full_list)
+{
+    my $entry_text = $entry->{value} . "\x1E" . unidecode($entry->{label});
+    my @lines = split /\n/, $wrapper->wrap($entry_text);
+
+    my $letter = uc(substr($entry->{label}, 0, 1));
+    
+    # Add a letter heading if needed
+    if ($current_letter ne $letter)
+    {
+        my @heading = ("", "     \x1E..:\x1D${letter}\x1E:..\x1E", "");
+        unshift @lines, @heading;
+
+        # Remove the leading blank line for the first section heading only
+        # (we'll take care of removing it from the top of any later columns
+        # as we add them, but the first column already exists...)
+        shift @lines if ! defined $current_letter;
+
+        $current_letter = $letter;
+    }
+
+    # If the entire entry, plus heading if present, doesn't fit in the
+    # current column we need to create a new one to put it in instead.
+    if (@{$columns[-1]} + @lines > $height)
+    {
+        push @columns, [ ];
+
+        # Remove leading blank line if a letter heading is present.
+        shift @lines if $lines[0] eq "";
+    }
+
+    push @{$columns[-1]}, @lines;
+}
+
+# Add an empty column if we've ended up with an odd number, to avoid
+# special-casing the last page during layout.
+push @columns, [] if @columns % 2 != 0;
+
+# Now lay columns out pairwise on frames
+while (@columns)
+{
+    my $left  = shift @columns;
+    my $right = shift @columns;
+
+    # Make sure the two columns are the same length by padding with blanks
+    while ($#$left < $#$right)
+    {
+        push @$left, "";
+    }
+
+    while ($#$left > $#$right)
+    {
+        push @$right, "";
+    }
+
+    # Glue columns together
+    my @lines = map
+        sprintf("%-20.20s%-20.20s", $left->[$_], $right->[$_]),
+        0..$#$left;
+
+    # Convert ASCII separator codes to markup, trim trailing whitespace
+    map s/\x1D/[Y]/g, @lines;
+    map s/\x1E/[W]/g, @lines;
+    map s/\x1F/[B]/g, @lines;
+    map s/\s+$//, @lines;
+
+    # Emplace in frame and start new one if we've any columns left    
+    $paginator->add_text_block(@lines);
+    $paginator->new_page() unless @columns == 0;
+}
+
+$paginator->finish();

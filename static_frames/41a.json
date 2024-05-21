@@ -32,7 +32,7 @@
     "response-data": {
         "response-action": {
             "args": null,
-            "exec": "/opt/telstar/volume/guestbook",
+            "exec": "/opt/telstar/guestbook",
             "post-action-frame": {
                 "frame-id": "a",
                 "page-no": 42

@@ -1,0 +1,103 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use JSON::PP;
+use Text::Unidecode;
+use Text::Wrapper;
+use TelstarFrame;
+use Paginator;
+use Getopt::Long;
+
+my $directory = "newframes";
+my $year = 2022;
+my $frame_number = 701;
+
+GetOptions("year=s" => \$year,
+           "directory=s" => \$directory) or die "Error in command line arguments.";
+
+# Slurp up the phonebook...
+my $filename = "phonebook.json";
+my $full_list;
+
+if (open my $input, "<", $filename)
+{
+    local $/ = undef;
+    $full_list = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+# ... set up our root frame and pagination...
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+my @header = (
+    "[R][n][D][Y]PHONE BOOK:[W]Not Available in Yellow",
+    "",
+    "",
+);
+
+my $frame = new TelstarFrame($frame_number);
+my $paginator = new Paginator($frame,
+{
+    header => \@header,
+    continues => "",
+    continued => ""
+});
+
+# We're going to use the ASCII separator-characters trick to encode attribute
+# changes, since an attribute change takes up a character cell but the markup
+# for them takes up three which'll screw up line length calculations...
+my $wrapper = Text::Wrapper->new(columns => 39,
+                                 par_start => "\x1D",
+                                 body_start => " "x6,
+                                 wrap_after => "\x1D\x1E/-");
+
+# Now trundle through the list, alphabetically
+my $current_letter = undef;
+
+sub by_name
+{
+    uc($a->{label}) cmp uc($b->{label});
+}
+
+for my $entry (sort by_name @$full_list)
+{
+    my $entry_text = $entry->{value} . "\x1E" . unidecode($entry->{label});
+    my @lines = split /\n/, $wrapper->wrap($entry_text);
+
+    map s/\x1D/[Y]/g, @lines;
+    map s/\x1E/[W]/g, @lines;
+
+    # Insert headings before each change of letter
+    my $letter = uc(substr($entry->{label}, 0, 1));
+    
+    if (! defined $current_letter || $current_letter ne $letter)
+    {
+        my @heading = ("", "     [W]..:[Y]${letter}[W]:..", "");
+        unshift @lines, @heading;
+
+        # Remove the leading blank line for the first section heading only
+        shift @lines if ! defined $current_letter;
+
+        $current_letter = $letter;
+    }
+
+    # Make sure we can fit the entire entry, plus section heading if one is
+    # is required; if not spill whole lot to new page.
+    if (! $paginator->has_room_for(@lines))
+    {
+        $paginator->new_page();
+        shift @lines if $lines[0] eq "";
+    }
+
+    $paginator->add_text_block(@lines);
+}
+
+$paginator->finish();

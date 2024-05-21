@@ -61,6 +61,8 @@ $frame->set_route(10, 42);  # # for next/first page
 
 for my $entry (@$entries)
 {
+    map s/\s+$//, $entry->{from}, @{$entry->{message}};
+    
     my @entry = (
         "",
         sprintf("[Y]From[C]%-20s   [C]%9s", $entry->{from}, $entry->{display_time}),
