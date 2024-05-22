@@ -4,10 +4,8 @@ use strict;
 use warnings;
 
 use JSON::PP;
-use Text::Unidecode;
 use Text::Wrapper;
-use TelstarFrame;
-use Paginator;
+use PriceListFormatter;
 
 my $directory = "newframes";
 my $filename = "on-tap.json";
@@ -31,136 +29,23 @@ else
 $TelstarFrame::directory = $directory;
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
 
-sub format_tap($)
-{
-    my $tap = shift;
-    my $product = $tap->{stocktype};
-
-    my $manufacturer = unidecode($product->{manufacturer});
-    my $name = unidecode($product->{name});
-    my $price = $product->{price};
-    my $unit = $product->{sale_unit_name};
-    my $abv = $product->{abv};
-    my $low_stock = $tap->{remaining_pct} <= 5.0;
-
-    my $low_stock_indicator = "\x1DLow stock!";
-
-    my $wrapper = Text::Wrapper->new(columns => 27,
-                                     par_start => "",
-                                     body_start => "");
-
-    my @lines = split /\n/, $wrapper->wrap("$manufacturer\x1F$name");
-    my $in_name = 0;
-
-    # Add (internal) colour codes at start of line - \x1E for the manufacturer,
-    # \x1F for the product name - we don't know where these may have wrapped so
-    # look for the \x1F embedded in the wrap() call above to tell when we've
-    # moved from one to the other.
-    for my $idx ($#lines)
-    {
-        $lines[$idx] = ($in_name ? "\x1F" : "\x1E") . $lines[$idx];
-        $in_name = 1 if $lines[$idx] =~ /\x1F/;
-    }
-
-    # We need at least two lines for the ABV and price.
-    if (@lines == 1)
-    {
-        push @lines, "";
-    }
-
-    if ($low_stock)
-    {
-        # Room for low stock indicator at end of second line, before price?
-        if ((28 - length($lines[1])) > length($low_stock_indicator))
-        {
-            # Pad line to full width and then replace tail with indicator
-            $lines[1] = sprintf("%-28.28s", $lines[1]);
-            substr($lines[1], -length($low_stock_indicator), length($low_stock_indicator)) = $low_stock_indicator;
-        }
-
-        # Do we need to add a third line containing just the indicator?
-        elsif (@lines == 2)
-        {
-            push @lines, sprintf("%39s", $low_stock_indicator);
-        }
-
-        # Put it at the end of the third line
-        else
-        {
-            $lines[2] = sprintf("%-28.28s%s", $lines[2], $low_stock_indicator);
-        }
-    } 
-
-    # Add ABV and prices to ends of first and second lines
-    $lines[0] = sprintf("%-28.28s\x1F%5s%% ABV", $lines[0], $abv);
-    $lines[1] = sprintf("%-28.28s\x1F#%s/%s", $lines[1], $price, $unit);
-
-    for (@lines)
-    {
-        s/\x1D/[R]/g;
-        s/\x1E/[C]/g;
-        s/\x1F/[W]/g;
-    }
-
-    return @lines;
-}
-
-sub by_id
-{
-    return $a->{id} <=> $b->{id};
-}
-
 my %sections = (
     "Real Ale" => $taplist->{ales},
     "Real Cider" => $taplist->{ciders},
-    "Lager and Craft Kegs" => $taplist->{kegs},
+    "Lager and Craft" => $taplist->{kegs},
 );
 
-my @header = (
-    "[R][n][D][Y]ON TAP:[W]Pouring now, in the bar",
-    "",
-    "",
-);
+my $header  = "[R][n][D][Y]ON TAP:[W]Pouring now, in the bar";
 
-my $frame = new TelstarFrame(31);
-my $paginator = new Paginator($frame,
-{
-    header => \@header,
-    continues => " "x12 . "[Y]Continues on next frame...",
-    continued => "",
-    on_new_page => sub {
-        my $frame = shift;
-        $frame->set_route(0, 3);    # 0 back to bar/shop index
-        1;
-    }
-});
-
-$frame->set_route(0, 3);    # 0 back to bar/shop index
+my $lister = new PriceListFormatter("bar",
+                                    31,
+                                    3,
+                                    $header);
 
 for my $section (sort keys %sections)
 {
-    my $first = 1;
-
-    for my $tap (sort by_id @{$sections{$section}})
-    {
-        my @section = ();
-
-        push @section, "[Y]$section" . ($first ? ":" : " (continued):");
-        push @section, format_tap($tap);
-        push @section, "";
-
-        if (! $paginator->has_room_for(@section))
-        {
-            $paginator->new_page();
-        }
-        elsif (! $first)
-        {
-            shift @section;
-        }
-
-        $paginator->add_text_block(@section);
-        $first = 0;
-    }
+    $lister->new_section($section);
+    $lister->list_items(map $_->{stocktype}, @{$sections{$section}});
 }
 
-$paginator->finish();
+$lister->finish();
