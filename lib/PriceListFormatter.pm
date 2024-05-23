@@ -201,6 +201,12 @@ sub list_items
     }
 }
 
+sub add_text_block
+{
+    my $self = shift;
+    $self->{paginator}->add_text_block(@_);
+}
+
 sub finish
 {
     my $self = shift;

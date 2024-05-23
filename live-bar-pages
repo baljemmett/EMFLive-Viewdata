@@ -1,0 +1,298 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use AnyEvent;
+use AnyEvent::WebSocket::Client 0.12;
+use Data::Dumper;
+use JSON::PP;
+use HTTP::Request;
+use LWP::UserAgent;
+use Getopt::Long;
+use PriceListFormatter;
+
+###
+#   Parameters
+###
+my $directory = "newframes";
+my $year = 2022;
+my $mode = "mock";
+my $interval = 60;
+
+GetOptions("year=s" => \$year,
+           "directory=s" => \$directory,
+           "mode=s" => \$mode,
+           "interval=i" => \$interval)
+    or die "Error in command line arguments.";
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+my %page_headers = (
+    31 => "[R][n][D][Y]ON TAP:[W]Pouring now, in the bar",
+    32 => "[R][n][D][Y]ALSO SERVING:[W]Other bar refreshment",
+    33 => "[R][n][D][Y]COLD AS ICE:[W]On sale in the cybar",
+);
+
+my %servers = (
+    live => "bar.emf.camp",
+    staging => "emftill.assorted.org.uk",
+    mock => undef,
+);
+
+my $json = JSON::PP->new->utf8;
+
+die "No such data mode $mode" unless exists $servers{$mode};
+my $host = $servers{$mode};
+
+# Fetch a complete endpoint response, either from a web service or mocked
+# local data (so we don't bother the real service with testing!)
+sub fetch($)
+{
+    my $endpoint = shift;
+    my $data;
+
+    if (defined $host)
+    {
+        # Fetch from the web service (host defined by mode)
+        my $url = "https://$host/api/$endpoint";
+
+        my $ua = LWP::UserAgent->new;
+        my $request = HTTP::Request->new('GET', $url);
+        my $response = $ua->request($request);
+
+        if (! $response->is_success)
+        {
+                die "Cannot fetch $url: " . $response->status_line;
+        }
+
+        $data = $response->decoded_content;
+    }
+    else
+    {
+        # Load local mocked data instead
+        if (open my $input, "<", "newbar/" .$endpoint)
+        {
+            local $/ = undef;
+            $data = <$input>;
+            close $input;
+        }
+        else
+        {
+            die "Cannot open mock file $endpoint: $!";
+        }
+    }
+
+    $data;
+}
+
+# Current stock information, to be kept up to date as changes arrive
+# from the web service (in live mode)
+my %stocklines = ();        # keyed by stockline ID
+my %fullstocklines = ();    # only used in mock mode
+my %stockline_pages = ();   # stockline ID -> [page, page]
+my %updated_pages = ();     # page number present if changed
+my %page_stocklines = ();   # page number -> [ID, ID]
+
+# Handle an incoming stockline update
+sub update_stockline($)
+{
+    my $stockline = shift;
+    my $id = $stockline->{id};
+
+    $stocklines{$id} = $stockline;
+
+    for my $page (@{$stockline_pages{$id}})
+    {
+        print "Received update for stockline $id ($stockline->{name}) on page $page\n";
+        $updated_pages{$page} = 1;
+    }
+}
+
+# In mock mode, we can't subscribe to updates via a websocket; instead load the
+# mocked full details and then despatch a fake update for each subscription.
+sub mock_subscribe_to_stockline($)
+{
+    my $id = shift;
+
+    if (%fullstocklines == 0)
+    {
+        my $response = $json->decode(fetch("stocklines-full.json"));
+
+        for my $stockline (@{$response->{stocklines}})
+        {
+            $fullstocklines{$stockline->{id}} = $stockline;
+        }
+    }
+
+    update_stockline($fullstocklines{$id});
+}
+
+# Assign stocklines to pages
+sub initialise_stocklines
+{
+    my $response = $json->decode(fetch("stocklines.json"));
+
+    for my $stockline (@{$response->{stocklines}})
+    {
+        my $id = $stockline->{id};
+        my $page = undef;
+
+        if ($stockline->{name} =~ /^(Pump|Tap|Cider) /)
+        {
+            # This currently means the main and Null Sector bar
+            # taps etc. are all listed on one page; might not be ideal!
+            $page = 31;
+        }
+        elsif ($stockline->{location} =~ /Null Sector/)
+        {
+            $page = 33;
+        }
+        else
+        {
+            $page = 32;
+        }
+
+        $stockline_pages{$id} = [$page];
+        $stocklines{$id} = $stockline;
+
+        push @{$page_stocklines{$page}}, $id;
+    }
+
+    print scalar %stocklines, " stocklines initialised.\n";
+}
+
+# Build a complete page (w/subframes)
+sub update_page($)
+{
+    my $page = shift;
+
+    # Build page sections from per-page stockline list
+    my %sections = ();
+
+    for my $stockline_id (@{$page_stocklines{$page}})
+    {
+        my $line = $stocklines{$stockline_id};
+        my $type = $line->{stocktype} || $line->{stockitem}->{stocktype};
+        next if not defined $type;
+
+        my $department = $type->{department}->{description};
+        push @{$sections{$department}}, $type;
+    }
+
+    # Now build the page by listing the sections alphabetically
+    my $lister = new PriceListFormatter("bar",
+                                        int($page),
+                                        3,
+                                        $page_headers{$page});
+
+    for my $section (sort keys %sections)
+    {
+        my $heading = $section;
+
+        $heading =~ s/\N{U+2264}/<=/g;
+        $heading =~ s/(\d\d% VAT)/$1 included/;
+        
+        $lister->new_section($heading);
+        $lister->list_items(@{$sections{$section}});
+    }
+
+    # ... or a placeholder message if we couldn't find any items!
+    if (%sections == 0)         #         1         2         3         4
+    {                           #1234567890123456789012345678901234567890
+        $lister->add_text_block("[Y]Oh no!  Disaster has struck...",
+                                "",
+                                " We can't currently find any stock",
+                                " information to show on this page.",
+                                "",
+                                " Please check back later, when we will",
+                                " hopefully have figured something out.");
+    }
+
+    $lister->finish();
+
+    print "Page $page updated.\n";
+}
+
+# Build all pages that have received updates since last call
+sub update_pages
+{
+    my @pages = keys %updated_pages;
+    %updated_pages = ();
+
+    map update_page($_), @pages;
+}
+
+###
+#  Main body of script...
+###
+initialise_stocklines();
+
+if ($mode eq "mock")
+{
+    print "Running in mock mode; will generate pages then exit.\n";
+
+    for my $id (keys %stocklines)
+    {
+        mock_subscribe_to_stockline($id);
+    }
+
+    update_pages();
+}
+else
+{
+    my $done = AnyEvent::condvar;
+    my $client = AnyEvent::WebSocket::Client->new;
+
+    $client->connect("wss://$host/websocket/")->cb(sub {
+        our $connection = eval { shift->recv };
+        if($@) {
+            # handle error...
+            warn $@;
+            $done->send;
+            return;
+        }
+
+        # Despatch incoming messages to handler
+        $connection->on(each_message => sub {
+            my($connection, $message) = @_;
+            update_stockline($json->decode($message->body));
+        });
+
+        # Handle a closed connection by terminating
+        $connection->on(finish => sub {
+            # $connection is the same connection object
+            my($connection) = @_;
+            print "Connection closed, terminating.\n";
+            $done->send;
+        });
+
+        # Now we're ready to subscribe to all known stocklines
+        for my $id (keys %stocklines)
+        {
+            $connection->send('SUBSCRIBE stockline/' . $id);
+        }
+
+        # And install a signal handler to clean up when done
+        our $ctrlc = AnyEvent->signal(signal => "INT", cb => sub {
+            print "Ctrl-C caught, terminating cleanly...\n";
+
+            for my $id (keys %stocklines)
+            {
+                $connection->send('UNSUBSCRIBE stockline/' . $id);
+            }
+
+            $connection->close;
+        });
+
+        # Kick off a timer to update pages periodically as needed
+        our $timer = AnyEvent->timer(after => 1, interval => $interval, cb => \&update_pages);
+    });
+
+    print "Initialisation complete, awaiting stockline updates.\n";
+    $done->recv;
+}
