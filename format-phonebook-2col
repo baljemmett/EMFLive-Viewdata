@@ -43,13 +43,23 @@ my @header = (
     "",
 );
 
+my $on_new_page = sub {
+    my $frame = shift;
+    $frame->set_route(0, 5);	# Route 0 back to phones index
+    $frame->set_route(5, 59);	# Route 5 somewhere else
+    1;
+};
+
 my $frame = new TelstarFrame($frame_number);
 my $paginator = new Paginator($frame,
 {
     header => \@header,
     continues => "",
-    continued => ""
+    continued => "",
+    on_new_page => $on_new_page,
 });
+
+$on_new_page->($frame);
 
 # We're going to use the ASCII separator-characters trick to encode attribute
 # changes, since an attribute change takes up a character cell but the markup
