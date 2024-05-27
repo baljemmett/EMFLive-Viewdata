@@ -54,6 +54,8 @@ sub count_lines
 }
 
 # Is a given line an exact multiple of the screen width?
+my $lineful = "-"x39;   # for separator graphic lines
+
 sub is_exact_line_width
 {
     my $text = shift;
@@ -64,6 +66,11 @@ sub is_exact_line_width
     # so convert them to spaces to the purposes of length checking...
     $text =~ s/\[([WRGBCMYwrgbcmyFSNDn-]|_[-+])\]/ /g;
 
+    # The seven separator-line codes translate into 39-character
+    # strings of repeating characters, to fill out a line after
+    # the introductory mosaic-colour code.
+    $text =~ s/\[([hml][-.]|=)\]/$lineful/g;
+    
     return length($text) % 40 == 0;
 }
 
