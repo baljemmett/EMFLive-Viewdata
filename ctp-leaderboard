@@ -1,0 +1,79 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use JSON::PP;
+use TelstarFrame;
+use POSIX qw(strftime);
+
+my $filename = "leaderboard.json";
+my $directory = "newframes";
+my $year = 2022;
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+# Start by reading the leaderboard from the JSON file...
+my $leaderboard;
+
+if (open my $input, "<", $filename)
+{
+    local $/ = undef;
+    $leaderboard = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+my @header = (
+    "[R][n][D][Y]CAPTURE THE PHONE:[W]Leaderboard",
+    "",
+    "",
+    #1234567890123456789012345678901234567890
+    " Below is the current leaderboard for",
+    " the Capture The Phone game: the top ten",
+    " players with their unique and total",
+    " capture scores. Press[Y]1[W]to learn more.",
+    "",
+    #1234567890123456789012345678901234567890
+    "[Y]   Player name                 Unq/Tot",
+    "[b][m.]",
+);
+
+my $frame = new TelstarFrame(53);
+$frame->set_route(0, 0);    # 0 back to index
+$frame->set_route(1, 52);   # 1 to info page
+$frame->{"navmessage-select"} = "[R][n][W]Press[Y]0[W]to return to index.";
+
+$frame->add_lines(@header);
+
+for my $player (@{$leaderboard->{playerStats}})
+{
+    #          1         2         3         4
+    # 1234567890123456789012345678901234567890
+    # .10.resourceful yellow squirrel.nnn.nnn.
+    #     (longest name in current dictionary)
+
+    my $line = sprintf("[Y]%2d[W]%-27.27s[C]%3d %3d",
+                       $player->{position},
+                       $player->{name},
+                       $player->{uniqueCaptures},
+                       $player->{totalCaptures});
+
+    $frame->add_line($line);
+}
+
+$frame->add_line("[b][m.]");
+
+my $now = time();
+my $updated = strftime("%a %H:%M", localtime($now));
+
+$frame->add_line(sprintf("%40s", "(Positions as of $updated.)"));
+
+$frame->write();

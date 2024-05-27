@@ -34,11 +34,14 @@ This is a Viewdata service for Electromagnetic Field 2024, based on John Newcomb
     - `41`: Sign
     - `42`: View
     - `49`: Terms/privacy policy
-- `5`: Phonebook
+- `5`: Phone stuff
+    - `51`: Telephone directory
+    - `52`: Capture the phone game
+    - `53`: Capture the phone leaderboard
+    - `54`: Reminder call service
 - `8`: About
     - `81`: About Viewdata
     - `82`: Telstar gateway
-    - `83`: Reminder call service
 - `9`: Main index (Telstar's default is created here)
     - `90`: Logout page
     - `901`: System status
