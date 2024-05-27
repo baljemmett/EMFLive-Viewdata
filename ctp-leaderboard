@@ -36,10 +36,9 @@ my @header = (
     "",
     "",
     #1234567890123456789012345678901234567890
-    " Below is the current leaderboard for",
-    " the Capture The Phone game: the top ten",
-    " players with their unique and total",
-    " capture scores. Press[Y]1[W]to learn more.",
+    " Current leaders, by number of captures:",
+    "[Y] _ Unique:[W]" . $leaderboard->{mostUniqueCapturesPlayer}->{name},
+    "[Y] _ Total: [W]" . $leaderboard->{mostCapturesOverallPlayer}->{name},
     "",
     #1234567890123456789012345678901234567890
     "[Y]   Player name                 Unq/Tot",
@@ -50,6 +49,7 @@ my $frame = new TelstarFrame(53);
 $frame->set_route(0, 5);    # 0 back to index
 $frame->set_route(1, 52);   # 1 to info page
 $frame->{"navmessage-select"} = "[R][n][W]Press[Y]0[W]for phones index.";
+$frame->{"navmessage-notfound"} = "[R][n][W]Not found! Press[Y]0[W]for phones index.";
 
 $frame->add_lines(@header);
 
@@ -75,5 +75,5 @@ my $now = time();
 my $updated = strftime("%a %H:%M", localtime($now));
 
 $frame->add_line(sprintf("%40s", "(Positions as of $updated.)"));
-
+$frame->add_line("[R][n][W]Press[Y]1[W]to learn more about the game.");
 $frame->write();
