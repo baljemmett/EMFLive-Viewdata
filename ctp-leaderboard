@@ -47,9 +47,9 @@ my @header = (
 );
 
 my $frame = new TelstarFrame(53);
-$frame->set_route(0, 0);    # 0 back to index
+$frame->set_route(0, 5);    # 0 back to index
 $frame->set_route(1, 52);   # 1 to info page
-$frame->{"navmessage-select"} = "[R][n][W]Press[Y]0[W]to return to index.";
+$frame->{"navmessage-select"} = "[R][n][W]Press[Y]0[W]for phones index.";
 
 $frame->add_lines(@header);
 
