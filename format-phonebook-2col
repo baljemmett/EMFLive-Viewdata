@@ -12,7 +12,7 @@ use Getopt::Long;
 
 my $directory = "newframes";
 my $year = 2022;
-my $frame_number = 702;
+my $frame_number = 51;
 
 GetOptions("year=s" => \$year,
            "directory=s" => \$directory) or die "Error in command line arguments.";
