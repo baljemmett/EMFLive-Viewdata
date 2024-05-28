@@ -133,6 +133,9 @@ sub from_file($)
             edate    => $_->{"end_date"},
             stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
             etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
+            friendly => $_->{"is_family_friendly"} || 0,
+            recorded => $_->{"may_record"} || 0,
+            ticketed => $_->{"requires_ticket"} || 0,
         };
 
         # Convert £ to # because the 80s were a horrible time to ASCII.

@@ -28,6 +28,15 @@ $TelstarFrame::directory = "newframes";
 my $index_wrapper = Text::Wrapper->new(columns => 36);
 my $event_wrapper = Text::Wrapper->new(columns => 38);
 
+# How to display the various flags in schedule entry pages...
+# (note the trailing spaces so that invisible flags don't add
+# a joining space if we join(" ") them together)
+my %flags = (   # ... when false		... when true
+	friendly => ["",					"[G]Family Friendly "],
+	recorded => ["[R]Not Recorded ",	""],
+	ticketed => ["",					"[Y]Ticketed "],
+);
+
 ###
 # Subroutines
 ###
@@ -53,6 +62,9 @@ sub generate_event_detail_frames($$$@)
 	my ($event, $entry_frame_number, $on_new_page, @header) = @_;
 
 	my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
+	my @flags = map $flags{$_}->[$event->{$_}], sort keys %flags;
+	my $flags_line = join "", @flags;
+
 	my $frame = new TelstarFrame($entry_frame_number);
 	my $paginator = new Paginator($frame,
 	{
@@ -79,13 +91,14 @@ sub generate_event_detail_frames($$$@)
 	map { $frame->add_line("[C]$_"); } @wrapped_by;
 	$frame->add_line("");
 
-	# Cost, age range, max. attendees (as appropriate)
+	# Flags, cost, age range, max. attendees (as appropriate)
+	$frame->add_line($flags_line) if $flags_line;
 	add_wrapped_event_field($frame, "Cost", $event->{cost}) if $event->{cost};
 	add_wrapped_event_field($frame, "Ages", $event->{ages}) if $event->{ages};
 	add_wrapped_event_field($frame, "Capacity", $event->{capacity}) if $event->{capacity};
 
 	# A blank line to set off the header block, if needed
-	$frame->add_line("") if $event->{cost} || $event->{ages} || $event->{capacity};
+	$frame->add_line("") if $flags_line || $event->{cost} || $event->{ages} || $event->{capacity};
 
 	# Content note (if any) before description
 	if (defined $event->{cws} && $event->{cws} ne "")
