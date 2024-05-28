@@ -50,7 +50,7 @@ This is a Viewdata service for Electromagnetic Field 2024, based on John Newcomb
 
 ## Outstanding TODO items
 
-As of 2024-05-15 01:30:
+As of 2024-05-28 01:45:
 
 - Parameterise nav messages etc. for consistency
 - General routing updates:
@@ -58,16 +58,11 @@ As of 2024-05-15 01:30:
     - Update all navigation messages and routing tables
     - Do we have room for a second navigation line on event pages?
     - route final page of schedules back to something - start or index?
-- Page `81`/`82` - About Viewdata/Telstar gateway - rewrite?  Service header?
-- Page `83` - detail reminder call service
 - Page `990` - full index
 - Page `901` - add stats?
 - cron jobs for automated updating
     - Schedule can be pulled hourly/*n* times a day/manually
     - Now/Next should update probably every 5 minutes if not every minute
-- expose family-friendly flag
-- handle huge fields in header block (e.g. 117051)
-- Dockerise server with guestbook response handler etc.
 
 ## Things to check upstream
 

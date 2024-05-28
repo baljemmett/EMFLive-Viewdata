@@ -7,6 +7,10 @@ use JSON::PP;
 use Text::Unidecode;
 use Time::Piece;
 
+# Whether we're operating in an environment that can handle actual Unicode
+# rather than requiring it be smashed to ASCII
+our $unicode_clean = 0;
+
 # Whether to show the day in the end time, if it differs from the start day.
 our $show_end_day = 0;
 
@@ -91,6 +95,14 @@ sub format_end_time($$)
 	return $formatted;
 }
 
+# Smash Unicode to ASCII if required
+sub unicode_field($)
+{
+    my $text = shift;
+
+    return $unicode_clean ? $text : unidecode($text);
+}
+
 # Load the schedule from a JSON file
 sub from_file($)
 {
@@ -118,15 +130,15 @@ sub from_file($)
     {
         push @events, {
             id       => $_->{"id"},
-            title    => unidecode($_->{"title"}),
-            desc     => unidecode($_->{"description"}),
+            title    => unicode_field($_->{"title"}),
+            desc     => unicode_field($_->{"description"}),
             venue    => $_->{"venue"},
             type     => $event_types{$_->{"type"}},
-            by       => unidecode($_->{"speaker"}),
+            by       => unicode_field($_->{"speaker"}),
             cost     => $_->{"cost"} || "",
-            ages     => unidecode($_->{"age_range"} || ""),
-            cws      => unidecode($_->{"content_note"} || ""),
-            capacity => unidecode($_->{"attendees"} || ""),
+            ages     => unicode_field($_->{"age_range"} || ""),
+            cws      => unicode_field($_->{"content_note"} || ""),
+            capacity => unicode_field($_->{"attendees"} || ""),
             start    => format_date($_->{"start_date"}),
             end      => format_end_time($_->{"start_date"}, $_->{"end_date"}),
             sdate    => $_->{"start_date"},
