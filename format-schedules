@@ -114,7 +114,8 @@ sub generate_event_detail_frames($$$@)
 
 	if ($frame->count_lines() > 22)
 	{
-		print "Event $event->{id} has header block exceeding a single frame.\n";
+		print "! Event $event->{id} has header block exceeding a single frame, truncating...\n";
+		$#{$frame->{content}{lines}} = 21;
 	}
 
 	# And finally we can add the complete event description
