@@ -280,13 +280,15 @@ for my $page_title (@page_order)
 
     if ($page_title eq $last_page)
     {
-        $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]for earliest,[Y]0[W]for index.";
-        $frame->set_route(11, $first_frame_number);
+        $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]or[Y]0[W]to return to index.";
+        $frame->set_route(11, 6);
     }
     else
     {
         $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]for later,[Y]0[W]for index.";
     }
+
+    $frame->{"navmessage-notfound"} = "[R][n][W]Not found! Press[Y]0[W]for weather index.";
 
     $frame->add_lines(@page);
     $frame->write();

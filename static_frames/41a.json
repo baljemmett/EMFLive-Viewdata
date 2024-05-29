@@ -19,7 +19,7 @@
     },
     "frame-type": "response",
     "header-text": "[R][n][C] EMF 2022[W]Live   [-]",
-    "navmessage-notfound": "[B][n][Y]Page not found.[W]",
+    "navmessage-notfound": "[R][n][W]Page not found.[W]",
     "navmessage-select": "[R][n][Y]Press[W]_[Y]to continue.",
     "pid": {
         "frame-id": "a",

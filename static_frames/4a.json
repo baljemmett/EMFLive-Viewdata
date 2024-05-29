@@ -10,6 +10,6 @@
   },
   "routing-table": [ 9, 41, 42, 9, 9, 9, 9, 9, 9, 49, 9 ],
   "header-text": "[R][n][C] EMF 2022[W]Live   [-]",
-  "navmessage-select": "[B][n][Y]Press[W]#[Y]for main index.",
+  "navmessage-select": "[R][n][Y]Press[W]_[Y]for main index.",
   "navmessage-notfound": "[R][n][W]Page not found.[_-]"
 }

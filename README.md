@@ -39,6 +39,8 @@ This is a Viewdata service for Electromagnetic Field 2024, based on John Newcomb
     - `52`: Capture the phone game
     - `53`: Capture the phone leaderboard
     - `54`: Reminder call service
+- `6`: Weather stuff - live observations on index
+    - `61`..`66`: Five-day Met Office forecast, by day
 - `8`: About
     - `81`: About Viewdata
     - `82`: Telstar gateway
@@ -50,13 +52,10 @@ This is a Viewdata service for Electromagnetic Field 2024, based on John Newcomb
 
 ## Outstanding TODO items
 
-As of 2024-05-28 01:45:
+As of 2024-05-30 00:10:
 
-- Parameterise nav messages etc. for consistency
 - General routing updates:
     - Decide on consistent scheme (maybe per section, but globally is better)
-    - Update all navigation messages and routing tables
-    - Do we have room for a second navigation line on event pages?
     - route final page of schedules back to something - start or index?
 - Page `990` - full index
 - Page `901` - add stats?
@@ -66,7 +65,7 @@ As of 2024-05-28 01:45:
 
 ## Things to check upstream
 
-- Routing: any way to route to sub-frame?  Looks like no, but can work around this with numbered subpages instead (implemented 2022-03-04).
+- Routing: any way to route to sub-frame?  Looks like no, but can work around this with numbered subpages instead (implemented 2024-03-04).
 - Exit pages aren't displayed before disconnecting (fixed 2024-03-02)
 - Disconnecting from gateway service doesn't return to local service
 - History stack / back nav bug? (fixed 2024-03-02)

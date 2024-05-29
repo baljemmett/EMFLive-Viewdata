@@ -65,6 +65,8 @@ $frame->add_lines(@header);
 $frame->add_line(join(" ", @day_links[0..2]));
 $frame->add_line(join(" ", @day_links[3..$#day_links]));
 
-$frame->{"navmessage-select"} = "[R][n][W]Select day, or[Y]_[W]for main index.";
+$frame->{"navmessage-select"} = "[R][n][Y]Select day, or[W]_[Y]for main index.";
+$frame->{"navmessage-notfound"} = "[R][n][Y]Not found! Press[W]_[Y]for main index.";
+
 $frame->set_route(11, 9);
 $frame->write();

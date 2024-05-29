@@ -10,6 +10,6 @@
   },
   "routing-table": [ 0, 1, 2, 3, 4, 0, 0, 0, 8, 90, 0 ],
   "header-text": "[-]",
-  "navmessage-select": "[B][n][Y]Type item number or[W]*page#[Y]=>[W][_+]",
+  "navmessage-select": "[R][n][Y]Type item or[W]*page#[Y]number.",
   "navmessage-notfound": "[R][n][W]Page not found.[_-]"
 }

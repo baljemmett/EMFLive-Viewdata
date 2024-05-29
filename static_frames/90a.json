@@ -19,7 +19,7 @@
     },
     "frame-type": "exit",
     "header-text": "[B][n][W]Goodbye!",
-    "navmessage-select": "[B][n][Y]Disconnected.",
+    "navmessage-select": "[R][n][Y]Disconnected.",
     "navmessage-notfound": "[R][n][W]Page not found.[_-]",
     "pid": {
         "frame-id": "a",

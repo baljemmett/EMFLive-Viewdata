@@ -19,7 +19,7 @@
     },
     "frame-type": "initial",
     "header-text": "[-]",
-    "navmessage-notfound": "[B][n][Y]Page not found.[W]",
+    "navmessage-notfound": "[R][n][W]Page not found.[W]",
     "navmessage-select": "[R][n][Y]Press[W]_[Y]to continue.",
     "pid": {
         "frame-id": "a",

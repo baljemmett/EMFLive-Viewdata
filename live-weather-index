@@ -168,12 +168,13 @@ sub build_page
     else
     {
         $frame->add_line("[R]Observations from the on-site weather");
-        $frame->add_line("[R]station are not currently available.");
+        $frame->add_line("[R]station are currently unavailable.");
         $frame->add_line("");
         $frame->add_line("[R]Please check back later.");
     }
     
-    $frame->{"navmessage-select"} = "[R][n][W]Select day, or[Y]_[W]for main index.";
+    $frame->{"navmessage-select"} = "[R][n][Y]Select day, or[W]_[Y]for main index.";
+    $frame->{"navmessage-notfound"} = "[R][n][Y]Not found! Press[W]_[Y]for main index.";
     $frame->set_route(11, 9);
     $frame->write();
 
