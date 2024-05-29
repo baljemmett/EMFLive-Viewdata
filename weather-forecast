@@ -13,6 +13,7 @@ my $directory = "wxframes";
 my $year = 2022;
 
 my $logical_day_start = 6;
+my $first_frame_number = 61;
 
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";
@@ -84,6 +85,10 @@ sub hour_to_period
 my %pages = ();
 my @page_order = ();
 
+my %day_frames = ();
+my %page_frames = ();
+my $frame_number = $first_frame_number;
+
 for my $period (@{$data->{SiteRep}->{DV}->{Location}->{Period}})
 {
     die "Unexpected period type $period->{type}" if $period->{type} ne "Day";
@@ -105,6 +110,9 @@ for my $period (@{$data->{SiteRep}->{DV}->{Location}->{Period}})
 
         push @page_order, $forecast_page unless exists $pages{$forecast_page};
         push @{$pages{$forecast_page}}, $forecast;
+
+        $day_frames{$logical_day} = $frame_number++ unless exists $day_frames{$logical_day};
+        $page_frames{$forecast_page} = $day_frames{$logical_day};
     }
 }
 
@@ -213,13 +221,35 @@ sub table_line
 }
 
 # Now generate a frame for each page
-my $frame = new TelstarFrame(62);
+my $frame = undef;
+my $current_frame_num = 0;
 
 my $last_page = $page_order[-1];
 
 for my $page_title (@page_order)
 {
     my ($l, $r) = @{$pages{$page_title}};
+    my $frame_num = $page_frames{$page_title};
+
+    # Have we changed frame numbers (day rollover)?
+    if ($frame_num != $current_frame_num)
+    {
+        # Update previous day to point to this one as the next
+        if (defined $frame)
+        {
+            $frame->set_route(11, $frame_num);
+            $frame->write();
+        }
+
+        # Create new frame with right number
+        $frame = new TelstarFrame($frame_num);
+        $current_frame_num = $frame_num;
+    }
+    else
+    {
+        # No, so just add another subframe to this one
+        $frame = $frame->next_subpage();
+    }
 
     my @page = (
         "[R][n][D][Y]WEATHER:[W]$page_title",
@@ -250,7 +280,7 @@ for my $page_title (@page_order)
     if ($page_title eq $last_page)
     {
         $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]for earliest,[Y]0[W]for index.";
-        $frame->set_route(11, 62);
+        $frame->set_route(11, $first_frame_number);
     }
     else
     {
