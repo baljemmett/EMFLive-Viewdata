@@ -1,0 +1,261 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use JSON::PP;
+use TelstarFrame;
+use POSIX qw(strftime);
+use Time::Piece;
+use Data::Dumper;
+
+my $filename = "ledbury-3hour.json";
+my $directory = "wxframes";
+my $year = 2022;
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+# Start by reading the forecast from the JSON file...
+my $data;
+
+if (open my $input, "<", $filename)
+{
+    local $/ = undef;
+    $data = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $filename: $!";
+}
+
+# Make sure it's what we expect it to be
+die "Unexpected data type $data->{SiteRep}->{DV}->{type}" unless
+    $data->{SiteRep}->{DV}->{type} eq "Forecast";
+
+die "Unexpected location $data->{SiteRep}->{DV}->{Location}->{name}" unless
+    $data->{SiteRep}->{DV}->{Location}->{name} eq "LEDBURY";
+
+my %param_units = ();
+for my $params (@{$data->{SiteRep}->{Wx}->{Param}})
+{
+    $param_units{$params->{name}} = $params->{units};
+}
+
+my %expected_units = (
+    F => "C",
+    H => "%",
+    T => "C",
+    D => "compass",
+    S => "mph",
+    U => "",
+    W => "",
+    Pp => "%",
+);
+
+for (keys %expected_units)
+{
+    die "Unexpected unit $param_units{$_} for parameter $_" unless
+        $param_units{$_} eq $expected_units{$_};
+}
+
+# Pull out the time the forecast was made
+my $updated_str = $data->{SiteRep}->{DV}->{dataDate};
+my $updated_utc = Time::Piece->strptime($updated_str, "%FT%TZ");
+my $updated_local = localtime($updated_utc->epoch);
+my $updated = $updated_local->strftime("%a %H:%M");
+
+sub hour_to_period
+{
+    my $hour = shift;
+
+    return "Overnight" if $hour < 6;
+    return "Morning" if $hour < 12;
+    return "Afternoon" if $hour < 18;
+    return "Evening";
+}
+
+# Assign forecasts to pages
+my %pages = ();
+my @page_order = ();
+
+for my $period (@{$data->{SiteRep}->{DV}->{Location}->{Period}})
+{
+    die "Unexpected period type $period->{type}" if $period->{type} ne "Day";
+    my $day_start_utc = Time::Piece->strptime($period->{value}, "%FZ");
+    my $forecast_day = $day_start_utc->fullday;
+
+    for my $forecast (@{$period->{Rep}})
+    {
+        my $minute = $forecast->{'$'};
+        my $hour = int($minute / 60);
+        my $local = localtime($day_start_utc->epoch + 60 * $minute);
+
+        $forecast->{Day} = $local->wdayname;
+        $forecast->{Time} = $local->strftime("%H:%M");   
+
+        my $forecast_page = $day_start_utc->fullday . " " . hour_to_period($hour);
+
+        push @page_order, $forecast_page unless exists $pages{$forecast_page};
+        push @{$pages{$forecast_page}}, $forecast;
+    }
+}
+
+# Apply units and suchlike to each forecast, on a page-by-page basis
+# so that we can make sure there are exactly two on each page.
+my %types_top = ();
+my %types_bottom = ();
+my %types = (
+    NA => "Unknown",
+    -1 => "Trace Rain",
+    0 => "Clear",
+    1 => "Sunny",
+    2 => "Partly Cloudy",
+    3 => "Partly Cloudy",
+    5 => "Mist",
+    6 => "Fog",
+    7 => "Cloudy",
+    8 => "Overcast",
+    9 => "Light Showers",
+    10 => "Light Showers",
+    11 => "Drizzle",
+    12 => "Light Rain",
+    13 => "Heavy Showers",
+    14 => "Heavy Showers",
+    15 => "Heavy Rain",
+    16 => "Sleet Showers",
+    17 => "Sleet Showers",
+    18 => "Sleet",
+    19 => "Hail Showers",
+    20 => "Hail Showers",
+    21 => "Hail",
+    22 => "L.Snow Showers",
+    23 => "L.Snow Showers",
+    24 => "Light Snow",
+    25 => "H.Snow Showers",
+    26 => "H.Snow Showers",
+    27 => "Heavy Snow",
+    28 => "Thunder Showers",
+    29 => "Thunder Showers",
+    30 => "Thunder",
+);
+
+my %uv = (
+    0 => "N/A",
+    1 => "1 Low",
+    2 => "2 Low",
+    3 => "3 Moderate",
+    4 => "4 Moderate",
+    5 => "5 Moderate",
+    6 => "6 High",
+    7 => "7 High",
+    8 => "8 V. High",
+    9 => "9 V. High",
+    10 => "10 V. High",
+    11 => "11 Extreme",
+);
+
+for my $type (keys %types)
+{
+    ($types_top{$type}, $types_bottom{$type}) = split / /, $types{$type}, 2;
+}
+
+for my $page_title (@page_order)
+{
+    my $max = $#{$pages{$page_title}};
+    $max = 1 if $max > 1;
+
+    for my $idx (0..$max)
+    {
+        my $forecast = $pages{$page_title}->[$idx];
+        $forecast->{F} .= " deg C";
+        $forecast->{T} .= " deg C";
+        $forecast->{H} .= "% RH";
+        $forecast->{S} .= " mph";
+        $forecast->{Pp} .= "%";
+
+        $forecast->{Wt} = $types_top{$forecast->{W}} || ($forecast->{W} . '[Y]?[C]');
+        $forecast->{Wb} = $types_bottom{$forecast->{W}} || "";
+
+        $forecast->{Uv} = $uv{$forecast->{U}} || ($forecast->{U} . '[Y]?[C]');
+        $forecast->{""} = "";
+    }
+
+    # Remove any excess forecasts, or add an empty one if needed.
+    $#{$pages{$page_title}} = 1;
+}
+
+my %titles = (
+    F => "Feels Like:",
+    T => "Temperature:",
+    H => "Humidity:",
+    S => "Wind Speed:",
+    D => "Wind Direction:",
+    Uv => "UV Index:",
+    Pp => "Precip. Prob'ity:",
+    Wt => "Weather Type:",
+    Wb => "",
+    "" => "",
+);
+
+sub table_line
+{
+    my ($field, $l, $r) = @_;
+
+    sprintf("[W]%17.17s[C]%-10.10s %-10.10s", $titles{$field}, $l->{$field}, $r->{$field});
+}
+
+# Now generate a frame for each page
+my $frame = new TelstarFrame(62);
+
+my $last_page = $page_order[-1];
+
+for my $page_title (@page_order)
+{
+    my ($l, $r) = @{$pages{$page_title}};
+
+    my @page = (
+        "[R][n][D][Y]WEATHER:[W]$page_title",
+        "",
+        "",
+        " Latest forecasts for Ledbury:",
+        "",
+        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Day}, $r->{Day}),
+        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Time}, $r->{Time}),
+        table_line("Wt", $l, $r),
+        table_line("Wb", $l, $r),
+        table_line("", $l, $r),
+        table_line("Pp", $l, $r),
+        table_line("T", $l, $r),
+        table_line("F", $l, $r),
+        table_line("S", $l, $r),
+        table_line("D", $l, $r),
+        table_line("H", $l, $r),
+        table_line("Uv", $l, $r),
+        "",
+        " (Last updated $updated; contains",
+        " public sector information licensed",
+        " under the Open Government Licence.)",
+    );
+
+    $frame->set_route(0, 6);    # 0 back to index
+
+    if ($page_title eq $last_page)
+    {
+        print "Last page!\n";
+        $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]for earliest,[Y]0[W]for index.";
+        $frame->set_route(11, 62);
+    }
+    else
+    {
+        $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]for later,[Y]0[W]for index.";
+    }
+
+    $frame->add_lines(@page);
+    $frame->write();
+    $frame = $frame->next_subpage();
+}
