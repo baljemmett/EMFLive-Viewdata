@@ -132,7 +132,7 @@ sub from_file($)
             id       => $_->{"id"},
             title    => unicode_field($_->{"title"}),
             desc     => unicode_field($_->{"description"}),
-            venue    => $_->{"venue"},
+            venue    => unicode_field($_->{"venue"}),
             type     => $event_types{$_->{"type"}},
             by       => unicode_field($_->{"speaker"}),
             cost     => $_->{"cost"} || "",
