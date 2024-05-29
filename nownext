@@ -17,7 +17,7 @@ use Text::Wrapper;
 ###
 
 # Which year are we in, and where's the schedule file?
-my $year     = 2022;
+my $year     = 2024;
 my $filename = "$year.json";
 
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";

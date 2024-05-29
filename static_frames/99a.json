@@ -6,7 +6,7 @@
         "port": 0
     },
     "content": {
-        "data": "\r\n\r\n\r\n[b][h-][g[        Welcome to]][g[    EMF 2022 Live]][b][h-]\r\n\r\n[W][GREETING].\r\n\r\n[W]YOU ARE CONNECTED TO[B][SERVER]\r\n[W]ON [DATE] AT [TIME].\r\n",
+        "data": "\r\n\r\n[b][h-][g[         Welcome to]][g[   Electromagnetic]][g[  Field 2024 - Live!]][b][h-]\r\n[W][GREETING].\r\n\r\n[W]YOU ARE CONNECTED TO[B][SERVER]\r\n[W]ON [DATE] AT [TIME].\r\n",
         "type": "markup"
     },
     "cost": 0,

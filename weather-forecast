@@ -11,7 +11,7 @@ use Time::Piece;
 my $filename = "ledbury-3hour.json";
 my $daylist = "weather-days.json";
 my $directory = "wxframes";
-my $year = 2022;
+my $year = 2024;
 
 my $logical_day_start = 6;
 my $first_frame_number = 61;

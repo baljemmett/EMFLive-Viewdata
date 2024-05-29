@@ -9,7 +9,7 @@
     "type": "edit.tf"
   },
   "routing-table": [ 9, 81, 82, 99999, 99999, 99999, 99999, 99999, 99999, 99999, 9 ],
-  "header-text": "[R][n][C] EMF 2022[W]Live   [-]",
+  "header-text": "[R][n][C] EMF 2024[W]Live   [-]",
   "navmessage-select": "[R][n][Y]Press[W]_[Y]for main index.",
   "navmessage-notfound": "[R][n][W]Page not found.[_-]"
 }
