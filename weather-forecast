@@ -7,11 +7,12 @@ use JSON::PP;
 use TelstarFrame;
 use POSIX qw(strftime);
 use Time::Piece;
-use Data::Dumper;
 
 my $filename = "ledbury-3hour.json";
 my $directory = "wxframes";
 my $year = 2022;
+
+my $logical_day_start = 6;
 
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";
@@ -73,7 +74,7 @@ sub hour_to_period
 {
     my $hour = shift;
 
-    return "Overnight" if $hour < 6;
+    return "Night" if $hour < 6;
     return "Morning" if $hour < 12;
     return "Afternoon" if $hour < 18;
     return "Evening";
@@ -94,11 +95,13 @@ for my $period (@{$data->{SiteRep}->{DV}->{Location}->{Period}})
         my $minute = $forecast->{'$'};
         my $hour = int($minute / 60);
         my $local = localtime($day_start_utc->epoch + 60 * $minute);
+        my $logical = localtime($local->epoch - $logical_day_start * 60 * 60);
+        my $logical_day = $logical->fullday;
 
         $forecast->{Day} = $local->wdayname;
         $forecast->{Time} = $local->strftime("%H:%M");   
 
-        my $forecast_page = $day_start_utc->fullday . " " . hour_to_period($hour);
+        my $forecast_page = $logical_day . " " . hour_to_period($hour);
 
         push @page_order, $forecast_page unless exists $pages{$forecast_page};
         push @{$pages{$forecast_page}}, $forecast;
@@ -246,7 +249,6 @@ for my $page_title (@page_order)
 
     if ($page_title eq $last_page)
     {
-        print "Last page!\n";
         $frame->{"navmessage-select"} = "[R][n][W]Press[Y]_[W]for earliest,[Y]0[W]for index.";
         $frame->set_route(11, 62);
     }
