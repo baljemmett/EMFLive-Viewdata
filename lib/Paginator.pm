@@ -29,12 +29,16 @@ sub new
         nav_first => defaults_to($args->{nav_first}, "[R][n][Y]Press[W]0[Y]to return,[W]#[Y]for next page."),
         nav_mid   => defaults_to($args->{nav_mid},   "[R][n][Y]Press[W]*#[Y]for prev,[W]#[Y]for next page."),
         nav_last  => defaults_to($args->{nav_last},  "[R][n][Y]Press[W]*#[Y]for prev or[W]0[Y]for index."),
+        nav_error => defaults_to($args->{nav_error}, "[R][n][Y]Not found! Press[W]0[Y]to return to index."),
         continues => defaults_to($args->{continues}, "[Y]... continues on next page"),
         continued => defaults_to($args->{continued}, "[Y]... continued from previous page"),
 
         # specifies a new-page callback, which is passed the new frame.
         # return falsity to suppress adding the header etc to it.
         on_new_page => defaults_to($args->{on_new_page}, sub { 1 }),
+
+        # indicates that we're still on the first frame, for nav messages.
+        _first_frame => 1
     }, $class;
 
     $self->{frame}->add_lines(@{$args->{header}});
@@ -47,7 +51,8 @@ sub split_page
     my ($self, $frame) = @_;
 
     $frame->add_line($self->{continues}) if $self->{continues};
-    $frame->{"navmessage-select"} = $frame->{"pid"}{"frame-id"} eq "a" ? $self->{nav_first} : $self->{nav_mid};
+    $frame->{"navmessage-select"} = $self->{_first_frame} ? $self->{nav_first} : $self->{nav_mid};
+    $frame->{"navmessage-notfound"} = $self->{nav_error};
 
     # Create new subframe before we save this one, so that
     # routing works if set to sequential numbering.
@@ -55,6 +60,7 @@ sub split_page
     $frame->write();
     
     $self->{frame} = $frame = $next_frame;
+    $self->{_first_frame} = 0;
 
     if ($self->{on_new_page}->($self->{frame}))
     {
@@ -169,9 +175,7 @@ LAYOUT:
         }
     }
 
-    # Set navigation message on final page appropriately and write it out.
-    $frame->{"navmessage-select"} = $frame->{"pid"}{"frame-id"} eq "a" ? $self->{nav_only} : $self->{nav_last};
-    $frame->write();
+    $self->finish;
 }
 
 sub has_room_for
@@ -205,7 +209,13 @@ sub frame
 sub finish
 {
     my ($self) = @_;
-    $self->{frame}->write();
+    my $frame = $self->{frame};
+    
+    # Set navigation message on final page appropriately and write it out.
+    $frame->{"navmessage-select"} = $self->{_first_frame} ? $self->{nav_only} : $self->{nav_last};
+    $frame->{"navmessage-notfound"} = $self->{nav_error};
+
+    $frame->write();
 }
 
 1;
