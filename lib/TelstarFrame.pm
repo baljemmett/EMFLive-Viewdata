@@ -98,9 +98,9 @@ sub write
 
     $dir = $directory unless defined $dir;
     my $pid = \%{$output{pid}};
-    my $filename = $directory . "/" . $pid->{"page-no"} . $pid->{"frame-id"} . ".json";
+    $self->{filename} = $directory . "/" . $pid->{"page-no"} . $pid->{"frame-id"} . ".json";
 
-    open my $file, ">", $filename or die "Cannot create $filename: $!";
+    open my $file, ">", $self->{filename} or die "Cannot create $self->{filename}: $!";
     print $file JSON::PP->new->pretty->encode(\%output);
     close $file;
 }

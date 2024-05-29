@@ -7,6 +7,7 @@ use AnyEvent;
 use AnyEvent::WebSocket::Client 0.12;
 use Data::Dumper;
 use JSON::PP;
+use TelstarClient;
 use HTTP::Request;
 use LWP::UserAgent;
 use Getopt::Long;
@@ -15,7 +16,7 @@ use PriceListFormatter;
 ###
 #   Parameters
 ###
-my $directory = "newframes";
+my $directory = "barframes";
 my $year = 2022;
 my $mode = "mock";
 my $interval = 60;
@@ -31,6 +32,8 @@ GetOptions("year=s" => \$year,
 
 $TelstarFrame::directory = $directory;
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+my $telstar = new TelstarClient;
 
 my %page_headers = (
     31 => "[R][n][D][Y]ON TAP:[W]Pouring now, in the bar",
@@ -224,7 +227,11 @@ sub update_pages
     my @pages = keys %updated_pages;
     %updated_pages = ();
 
-    map update_page($_), @pages;
+    if (@pages)
+    {
+        map update_page($_), @pages;
+        $telstar->addframes($directory . "/*");
+    }
 }
 
 ###

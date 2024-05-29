@@ -7,6 +7,7 @@ use AnyEvent;
 use AnyEvent::MQTT;
 use File::stat;
 use JSON::PP;
+use TelstarClient;
 use TelstarFrame;
 use Data::Dumper;
 use POSIX qw(strftime fmod);
@@ -28,6 +29,8 @@ our $json = JSON::PP->new->utf8;
 
 my $broker = "mqtt.emf.camp";
 my $topic = "emf/weather";
+
+my $telstar = new TelstarClient;
 
 # Start by reading the day list from the JSON file...
 sub read_day_list
@@ -173,6 +176,8 @@ sub build_page
     $frame->{"navmessage-select"} = "[R][n][W]Select day, or[Y]_[W]for main index.";
     $frame->set_route(11, 9);
     $frame->write();
+
+    $telstar->addframe($frame->{filename});
 }
 
 # MQTT async handlers etc
@@ -200,7 +205,6 @@ sub on_message
     my ($topic, $message) = @_;
 
     build_page($message);
-    $stop->send(0); # terminate after first observation
 }
 
 # Start of main body of script
