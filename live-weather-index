@@ -1,0 +1,225 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use AnyEvent;
+use AnyEvent::MQTT;
+use File::stat;
+use JSON::PP;
+use TelstarFrame;
+use Data::Dumper;
+use POSIX qw(strftime fmod);
+
+my $daylist = "weather-days.json";
+my $directory = "wxframes";
+my $year = 2022;
+my $frame_number = 6;
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+our $days = {};
+our $days_last_mtime = 0;
+our $json = JSON::PP->new->utf8;
+
+my $broker = "mqtt.emf.camp";
+my $topic = "emf/weather";
+
+# Start by reading the day list from the JSON file...
+sub read_day_list
+{
+    my $mtime = stat($daylist)->mtime;
+
+    return if $mtime == $days_last_mtime;
+    $days_last_mtime = $mtime;
+
+    if (open my $input, "<", $daylist)
+    {
+        local $/ = undef;
+        $days = $json->decode(<$input>);
+        close $input;
+    }
+    else
+    {
+        print "Cannot open input $daylist: $!\n";
+    }
+}
+
+our %frame_keys = ();
+sub day_text
+{
+    my $frame = shift;
+    my $dayname = $days->{$frame};
+    my $digit = $frame_keys{$frame};
+
+    sprintf("[B]%1d[Y]%-9.9s", $digit, $dayname);
+}
+
+my %uv = (
+    0 => "N/A",
+    1 => "Low",
+    2 => "Low",
+    3 => "Moderate",
+    4 => "Moderate",
+    5 => "Moderate",
+    6 => "High",
+    7 => "High",
+    8 => "Very High",
+    9 => "Very High",
+    10 => "Very High",
+    11 => "Extreme",
+);
+
+my %directions = (
+      0   => "N",
+     22.5 => "NNE",
+     45   => "NE",
+     67.5 => "ENE",
+     90   => "E",
+    112.5 => "ESE",
+    135   => "SE",
+    157.5 => "SSE",
+    180   => "S",
+    202.5 => "SSW",
+    225   => "SW",
+    247.5 => "WSW",
+    270   => "W",
+    292.5 => "WNW",
+    315   => "NW",
+    337.5 => "NNW",
+);
+
+sub cardinal
+{
+    my $dir = shift;
+
+    # Round to nearest 22.5-degree interval
+    my $closest_dir = 22.5 * int(($dir + 22.4)/22.5);
+    $closest_dir = fmod($closest_dir, 360);
+
+    return $directions{$closest_dir} || "???";
+}
+
+sub build_page
+{
+    my $frame = new TelstarFrame($frame_number);
+    my $observations_json = shift;
+    my $obs = $json->decode($observations_json);
+
+    print Dumper($obs);
+
+    my @header = (
+        "[R][n][D][Y]WEATHER UPDATES:[W]Mud Glorious Mud",
+        "",
+        "",
+        " Met Office forecasts for Ledbury are",
+        " available for the following days:",
+        "",
+    );
+
+    read_day_list();
+
+    %frame_keys = ();
+    for (sort keys %$days)
+    {
+        $frame_keys{$_} = (keys %frame_keys) + 1;
+        $frame->set_route($frame_keys{$_}, $_ + 0);
+    }
+
+    my @day_links = map day_text($_), sort keys %$days;
+
+    $frame->add_lines(@header);
+    $frame->add_line(join(" ", @day_links[0..2]));
+    $frame->add_line(join(" ", @day_links[3..$#day_links]));
+    $frame->add_line("");
+
+    my $now = strftime("%a %H:%M:%S", localtime);
+
+    my @observations = (
+        " Latest observations from the on-site",
+        " weather station, as of[C]$now:",
+        "",
+        sprintf("[Y]Temperature:[C]%d deg C (feels like %d)", $obs->{temp}, $obs->{feelslike}),
+        sprintf("[Y]Humidity:   [C]%d%% RH (%-0.16s)", $obs->{humidity}, $obs->{humidex_perception}),
+        sprintf("[Y]Indoors:    [C]%d deg C, %d%% RH", $obs->{tempin}, $obs->{humidityin}),
+        "",
+        sprintf("[Y]Wind Speed: [C]%d mph (%s)", $obs->{windspeed}, cardinal($obs->{winddir})),
+        sprintf("[Y]Rainfall:   [C]%d mm (hour), %d mm (day)", $obs->{hrain_piezo}, $obs->{drain_piezo}),
+        "",
+        sprintf("[Y]Barometric Pressure:[C]%d mbar", $obs->{baromabs}),
+        sprintf("[Y]UV Exposure Index:  [C]%d (%s)", $obs->{uv}, $uv{$obs->{uv}}),
+    );
+
+    $frame->add_lines(@observations);
+
+    $frame->{"navmessage-select"} = "[R][n][W]Select day, or[Y]_[W]for main index.";
+    $frame->set_route(11, 9);
+    $frame->write();
+}
+
+my $stop = AnyEvent::condvar;
+my $subbed = AnyEvent::condvar;
+
+sub on_error
+{
+    my ($fatal, $error) = @_;
+
+    if ($fatal)
+    {
+        print "Fatal error: ", $error, "\n";
+        $subbed->ready ? $stop->send(0) : $subbed->send(-1);
+    }
+    else
+    {
+        print "Error: ", $error, "\n";
+        print "Attempting to reconnect...\n";
+    }
+}
+
+sub on_message
+{
+    my ($topic, $message) = @_;
+
+    build_page($message);
+    $stop->send(0); # terminate after first observation
+}
+
+my $ctrlc = AnyEvent->signal(signal => "INT", cb => sub {
+    print "Ctrl-C caught, terminating cleanly...\n";
+    $subbed->ready ? $stop->send(0) : $subbed->send(-1);
+});
+
+# Set up our MQTT client...
+my $mqtt = AnyEvent::MQTT->new(host => $broker,
+                               on_error => \&on_error);
+
+# ... and subscribe, which causes it to connect
+$mqtt->subscribe(topic => $topic,
+                 cv => $subbed,
+                 callback => \&on_message);
+
+my $qos = $subbed->recv;
+if ($qos == -1)
+{
+    # A -1 means we came through on_error, so something went wrong connecting.
+    print "Failed to subscribe, giving up.\n";
+}
+else
+{
+    # Keep going until asked to stop
+    print "Listening for MQTT updates from weather station (QoS $qos)...\n";
+    $stop->recv;
+
+    print "Unsubscribing...\n";
+    my $cv = $mqtt->unsubscribe(topic => $topic);
+    $cv->recv;
+
+    print "Unsubscribed from updates from weather station.\n";
+}
+
+# All done!
+$mqtt->cleanup;
