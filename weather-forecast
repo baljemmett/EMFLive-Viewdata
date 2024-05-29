@@ -9,6 +9,7 @@ use POSIX qw(strftime);
 use Time::Piece;
 
 my $filename = "ledbury-3hour.json";
+my $daylist = "weather-days.json";
 my $directory = "wxframes";
 my $year = 2022;
 
@@ -289,5 +290,21 @@ for my $page_title (@page_order)
 
     $frame->add_lines(@page);
     $frame->write();
-    $frame = $frame->next_subpage();
+}
+
+# Now save the day list so the index page can update itself
+my %daylist = ();
+while (my ($day, $frame) = each %day_frames)
+{
+    $daylist{$frame} = $day;
+}
+
+if (open my $output, ">", $daylist)
+{
+    print $output JSON::PP->new->utf8->encode(\%daylist);
+    close $output;
+}
+else
+{
+    die "Cannot open output $daylist: $!";
 }

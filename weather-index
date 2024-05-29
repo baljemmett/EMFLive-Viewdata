@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use JSON::PP;
+use TelstarFrame;
+
+my $daylist = "weather-days.json";
+my $directory = "wxframes";
+my $year = 2022;
+my $frame_number = 6;
+
+# Ensure output directory exists
+-d $directory || mkdir $directory || die "Could not create $directory/: $!";
+
+$TelstarFrame::directory = $directory;
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+# Start by reading the day list from the JSON file...
+my $days;
+
+if (open my $input, "<", $daylist)
+{
+    local $/ = undef;
+    $days = JSON::PP->new->utf8->decode(<$input>);
+    close $input;
+}
+else
+{
+    die "Cannot open input $daylist: $!";
+}
+
+# Now we can build the index page...
+my $frame = new TelstarFrame($frame_number);
+
+my @header = (
+    "[R][n][D][Y]WEATHER UPDATES:[W]Mud Glorious Mud",
+    "",
+    "",
+    " Met Office forecasts for Ledbury are",
+    " available for the following days:",
+    "",
+);
+
+my %frame_keys = ();
+for (sort keys %$days)
+{
+    $frame_keys{$_} = (keys %frame_keys) + 1;
+    $frame->set_route($frame_keys{$_}, $_ + 0);
+}
+
+sub day_text
+{
+    my $frame = shift;
+    my $dayname = $days->{$frame};
+    my $digit = $frame_keys{$frame};
+
+    sprintf("[B]%1d[Y]%-9.9s", $digit, $dayname);
+}
+
+my @day_links = map day_text($_), sort keys %$days;
+
+$frame->add_lines(@header);
+$frame->add_line(join(" ", @day_links[0..2]));
+$frame->add_line(join(" ", @day_links[3..$#day_links]));
+
+$frame->{"navmessage-select"} = "[R][n][W]Select day, or[Y]_[W]for main index.";
+$frame->set_route(11, 9);
+$frame->write();
