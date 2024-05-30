@@ -7,6 +7,10 @@ use JSON::PP;
 use Text::Unidecode;
 use Time::Piece;
 
+# Whether we're operating in an environment that can handle actual Unicode
+# rather than requiring it be smashed to ASCII
+our $unicode_clean = 0;
+
 # Whether to show the day in the end time, if it differs from the start day.
 our $show_end_day = 0;
 
@@ -23,11 +27,11 @@ our %event_types = (
 
 # These could probably be computed but whatever
 my %days = (
-	"2022-06-02" => "Thu",
-	"2022-06-03" => "Fri",
-	"2022-06-04" => "Sat",
-	"2022-06-05" => "Sun",
-	"2022-06-06" => "Mon",
+	"2024-05-30" => "Thu",
+	"2024-05-31" => "Fri",
+	"2024-06-01" => "Sat",
+	"2024-06-02" => "Sun",
+	"2024-06-03" => "Mon",
 );
 
 # Set of regexes used to reorder venues in the canonical list. Venues matching
@@ -101,6 +105,14 @@ sub derive_reminder_code($)
     sprintf("99%04d", $event->{id});
 }
 
+# Smash Unicode to ASCII if required
+sub unicode_field($)
+{
+    my $text = shift;
+
+    return $unicode_clean ? $text : unidecode($text);
+}
+
 # Load the schedule from a JSON file
 sub from_file($)
 {
@@ -128,21 +140,24 @@ sub from_file($)
     {
         push @events, {
             id       => $_->{"id"},
-            title    => unidecode($_->{"title"}),
-            desc     => unidecode($_->{"description"}),
-            venue    => $_->{"venue"},
+            title    => unicode_field($_->{"title"}),
+            desc     => unicode_field($_->{"description"}),
+            venue    => unicode_field($_->{"venue"}),
             type     => $event_types{$_->{"type"}},
-            by       => unidecode($_->{"speaker"}),
+            by       => unicode_field($_->{"speaker"}),
             cost     => $_->{"cost"} || "",
-            ages     => unidecode($_->{"age_range"} || ""),
-            cws      => unidecode($_->{"content_note"} || ""),
-            capacity => unidecode($_->{"attendees"} || ""),
+            ages     => unicode_field($_->{"age_range"} || ""),
+            cws      => unicode_field($_->{"content_note"} || ""),
+            capacity => unicode_field($_->{"attendees"} || ""),
             start    => format_date($_->{"start_date"}),
             end      => format_end_time($_->{"start_date"}, $_->{"end_date"}),
             sdate    => $_->{"start_date"},
             edate    => $_->{"end_date"},
             stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
             etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
+            friendly => $_->{"is_family_friendly"} || 0,
+            recorded => $_->{"may_record"} || 0,
+            ticketed => $_->{"requires_ticket"} || 0,
             reminder => derive_reminder_code($_),
         };
 

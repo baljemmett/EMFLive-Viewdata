@@ -3,5 +3,8 @@ analysis/
 working/
 src/
 reminder-calls/sound-files/
+updaters/*.json
+updaters/*frames
+updaters/emflive.env
 telstar-util
 telstar-util.tok

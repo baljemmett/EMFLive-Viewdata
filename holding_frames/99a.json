@@ -6,7 +6,7 @@
         "port": 0
     },
     "content": {
-        "data": "\r\n\r\n\r\n\r\n\r\n\r\n[b][m-]\r\n[W]   Thank you for using[Y]EMF 2024 Live\r\n\r\n    You were connected to[B][SERVER]\r\n    Session ended at[Y][TIME]\r\n                  on[Y][DATE]\r\n\r\n    Enjoy the festival!\r\n\r\n[b][m-]\r\n",
+        "data": "[b][h-][g[      Coming soon:]][g[   Electromagnetic]][g[  Field 2024 - Live!]][b][h-]\r\n[W][GREETING].\r\n\r\n[W]This service is not yet available.\r\n[W]Please try again soon!\r\n\r\n[W]YOU WERE CONNECTED TO[B][SERVER]\r\n[W]ON [DATE] AT [TIME].\r\n",
         "type": "markup"
     },
     "cost": 0,
@@ -18,12 +18,12 @@
         "type": ""
     },
     "frame-type": "exit",
-    "header-text": "[B][n][W]Goodbye!",
-    "navmessage-select": "[R][n][Y]Disconnected.",
-    "navmessage-notfound": "[R][n][W]Page not found.[_-]",
+    "header-text": "[-]",
+    "navmessage-notfound": "[R][n][W]Page not found.[W]",
+    "navmessage-select": "[R][n][Y]Press[W]_[Y]to continue.",
     "pid": {
         "frame-id": "a",
-        "page-no": 90
+        "page-no": 99
     },
     "redirect": {
         "frame-id": "",
@@ -45,17 +45,17 @@
         "response-fields": null
     },
     "routing-table": [
-        990,
-        990,
-        990,
-        990,
-        990,
-        990,
-        990,
-        990,
-        990,
-        990,
-        990
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
     ],
     "title": {
         "data": "",
