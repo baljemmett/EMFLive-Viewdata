@@ -1,5 +1,8 @@
 analysis/
 working/
 src/
+updaters/*.json
+updaters/*frames
+updaters/emflive.env
 telstar-util
 telstar-util.tok

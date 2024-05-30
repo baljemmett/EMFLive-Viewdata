@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+MYDIR="$(dirname $(realpath $0))"
+ENVFILE="$MYDIR/emflive.env"
+NEWDIR="$MYDIR/5m-frames"
+
+# Load environment - will contain things like API keys!
+[ -x "$ENVFILE" ] && . "$ENVFILE"
+
+cd "$MYDIR"
+
+[ -d "$NEWDIR" ] && rm -r "$NEWDIR"
+mkdir "$NEWDIR"
+
+../nownext --directory "$NEWDIR"
+
+curl -o leaderboard.json 'https://capturethephone.co.uk/Api/Leaderboard/Public'
+../ctp-leaderboard --directory "$NEWDIR"
+
+../telstar-util login "${TELSTAR_API_SERVER:?no Telstar server}" "${TELSTAR_API_USERNAME:?no Telstar username}" "${TELSTAR_API_PASSWORD:?no Telstar password}" 
+../telstar-util addframes "${TELSTAR_API_SERVER:?no Telstar server}" "$NEWDIR" "${TELSTAR_API_DATABASE:?no Telstar database}"

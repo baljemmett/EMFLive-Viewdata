@@ -26,6 +26,11 @@ sub new
 
     $self->{server} =~ s#/$##;
 
+    if ($self->{server} !~ m#^https?://#)
+    {
+        $self->{server} = "http://" . $self->{server};
+    }
+
     if ($self->{server} =~ m#(//)?([^:/]+)(:(\d+))?(/|$)#)
     {
         $self->{_host} = $2;

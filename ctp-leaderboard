@@ -6,10 +6,15 @@ use warnings;
 use JSON::PP;
 use TelstarFrame;
 use POSIX qw(strftime);
+use Getopt::Long;
 
 my $filename = "leaderboard.json";
 my $directory = "newframes";
 my $year = 2024;
+
+GetOptions("year=s" => \$year,
+           "directory=s" => \$directory,
+           "filename=s" => \$filename) or die "Error in command line arguments.";
 
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";
@@ -37,8 +42,8 @@ my @header = (
     "",
     #1234567890123456789012345678901234567890
     " Current leaders, by number of captures:",
-    "[Y] _ Unique:[W]" . $leaderboard->{mostUniqueCapturesPlayer}->{name},
-    "[Y] _ Total: [W]" . $leaderboard->{mostCapturesOverallPlayer}->{name},
+    "[Y] _ Unique:[W]" . ($leaderboard->{mostUniqueCapturesPlayer}->{name} || "- nobody -"),
+    "[Y] _ Total: [W]" . ($leaderboard->{mostCapturesOverallPlayer}->{name} || "- nobody -"),
     "",
     #1234567890123456789012345678901234567890
     "[Y]   Player name                 Unq/Tot",

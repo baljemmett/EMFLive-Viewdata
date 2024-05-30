@@ -17,20 +17,23 @@ use Text::Wrapper;
 ###
 
 # Which year are we in, and where's the schedule file?
-my $year     = 2024;
-my $filename = "$year.json";
-
-$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
-$TelstarFrame::directory = "newframes";
+my $year      = 2024;
+my $filename  = "$year.json";
+my $directory = "newframes";
 
 ###
 #   Main body of script
 ###
 my $force_time = undef;
 
-GetOptions("file=s" => \$filename,
-           "time=s" => \$force_time)
+GetOptions("filename=s" => \$filename,
+           "time=s" => \$force_time,
+           "year=s" => \$year,
+           "directory=s" => \$directory)
 or die "Error in command line arguments.";
+
+$TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+$TelstarFrame::directory = $directory;
 
 # Find current time, but allow it to be partially overridden by command line.
 my $now = time();
