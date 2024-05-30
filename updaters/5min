@@ -7,7 +7,7 @@ ENVFILE="$MYDIR/emflive.env"
 NEWDIR="$MYDIR/5m-frames"
 
 # Load environment - will contain things like API keys!
-[ -x "$ENVFILE" ] && . "$ENVFILE"
+. "$ENVFILE" || true
 
 cd "$MYDIR"
 
