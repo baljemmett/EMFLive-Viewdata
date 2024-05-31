@@ -143,10 +143,10 @@ sub from_file($)
             end      => format_end_time($_->{"start_date"}, $_->{"end_date"}),
             sdate    => $_->{"start_date"},
             edate    => $_->{"end_date"},
-            stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S"),
-            etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S"),
+            stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S") - 3600,
+            etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S") - 3600,
             friendly => $_->{"is_family_friendly"} || 0,
-            recorded => $_->{"may_record"} || 0,
+            recorded => ($_->{"video_privacy"} || "") eq "public",
             ticketed => $_->{"requires_ticket"} || 0,
         };
 
