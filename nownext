@@ -147,7 +147,7 @@ sub generate_list
         my $key = 0;
 
         $paginator->add_text_block(
-            "[R][n][D][Y]NOW AND NEXT:[W]$venue",
+            sprintf("[R][n][D][Y]NOW AND NEXT:[W]%-22.22s", $venue),
             "",
         );
 
