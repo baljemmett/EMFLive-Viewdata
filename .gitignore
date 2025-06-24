@@ -6,3 +6,5 @@ updaters/*frames
 updaters/emflive.env
 telstar-util
 telstar-util.tok
+archive2024/
+barframes/
