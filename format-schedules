@@ -61,7 +61,7 @@ sub generate_event_detail_frames($$$@)
 {
 	my ($event, $entry_frame_number, $on_new_page, @header) = @_;
 
-	my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
+	my $schedule_line = sprintf("[C]%s - %s  %-17.17s", $event->{start}, $event->{end}, $event->{venue});
 	my @flags = map $flags{$_}->[$event->{$_}], sort keys %flags;
 	my $flags_line = join "", @flags;
 
@@ -167,7 +167,7 @@ sub generate_schedule_tree($$@)
 		my $entry_frame = $first_entry_frame + $event->{id};
 
 		# Build the index entry for this event
-		my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
+		my $schedule_line = sprintf("[C]%s - %s  %-18.18s", $event->{start}, $event->{end}, $event->{venue});
 		my @wrapped_title = split /\n/, $index_wrapper->wrap($event->{title});
 		my @wrapped_by    = split /\n/, $index_wrapper->wrap("$event->{type} by " . $event->{by});
 

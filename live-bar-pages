@@ -12,6 +12,7 @@ use HTTP::Request;
 use LWP::UserAgent;
 use Getopt::Long;
 use PriceListFormatter;
+use POSIX;
 
 ###
 #   Parameters
@@ -48,6 +49,11 @@ my %servers = (
 );
 
 my $json = JSON::PP->new->utf8;
+
+sub timestamp
+{
+    strftime("%F %T: ", localtime time);
+}
 
 die "No such data mode $mode" unless exists $servers{$mode};
 my $host = $servers{$mode};
@@ -111,7 +117,7 @@ sub update_stockline($)
 
     for my $page (@{$stockline_pages{$id}})
     {
-        print "Received update for stockline $id ($stockline->{name}) on page $page\n";
+        print timestamp, "Received update for stockline $id ($stockline->{name}) on page $page\n";
         $updated_pages{$page} = 1;
     }
 }
@@ -166,7 +172,7 @@ sub initialise_stocklines
         push @{$page_stocklines{$page}}, $id;
     }
 
-    print scalar %stocklines, " stocklines initialised.\n";
+    print timestamp, scalar %stocklines, " stocklines initialised.\n";
 }
 
 # Build a complete page (w/subframes)
@@ -218,7 +224,7 @@ sub update_page($)
 
     $lister->finish();
 
-    print "Page $page updated.\n";
+    print timestamp, "Page $page updated.\n";
 }
 
 # Build all pages that have received updates since last call
@@ -241,7 +247,7 @@ initialise_stocklines();
 
 if ($mode eq "mock")
 {
-    print "Running in mock mode; will generate pages then exit.\n";
+    print timestamp, "Running in mock mode; will generate pages then exit.\n";
 
     for my $id (keys %stocklines)
     {
@@ -274,7 +280,7 @@ else
         $connection->on(finish => sub {
             # $connection is the same connection object
             my($connection) = @_;
-            print "Connection closed, terminating.\n";
+            print timestamp, "Connection closed, terminating.\n";
             $done->send;
         });
 
@@ -286,7 +292,7 @@ else
 
         # And install a signal handler to clean up when done
         our $ctrlc = AnyEvent->signal(signal => "INT", cb => sub {
-            print "Ctrl-C caught, terminating cleanly...\n";
+            print timestamp, "Ctrl-C caught, terminating cleanly...\n";
 
             for my $id (keys %stocklines)
             {
@@ -300,6 +306,6 @@ else
         our $timer = AnyEvent->timer(after => 1, interval => $interval, cb => \&update_pages);
     });
 
-    print "Initialisation complete, awaiting stockline updates.\n";
+    print timestamp, "Initialisation complete, awaiting stockline updates.\n";
     $done->recv;
 }

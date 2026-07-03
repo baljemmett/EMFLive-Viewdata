@@ -118,6 +118,8 @@ sub addframe($$)
     my $endpoint = $self->{server} . "/frame";
     my $headers = ['Content-Type' => 'application/json; charset=utf-8'];
 
+    $endpoint .= "?db=primary" if $ENV{TELSTAR_API_DATABASE} eq "primary";
+
 RETRY:
     $attempt++;
 
@@ -149,6 +151,8 @@ sub delframe($$)
     my $attempt = 0;
 
     my $endpoint = $self->{server} . "/frame/" . $frame . "?purge=true";
+
+    $endpoint .= "&db=primary" if $ENV{TELSTAR_API_DATABASE} eq "primary";
 
 RETRY:
     $attempt++;
