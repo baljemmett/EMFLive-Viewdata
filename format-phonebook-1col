@@ -74,19 +74,19 @@ my $current_letter = undef;
 
 sub by_name
 {
-    uc($a->{label}) cmp uc($b->{label});
+    uc($a->{name}) cmp uc($b->{name});
 }
 
 for my $entry (sort by_name @$full_list)
 {
-    my $entry_text = $entry->{value} . "\x1E" . unidecode($entry->{label});
+    my $entry_text = $entry->{number} . "\x1E" . unidecode($entry->{name});
     my @lines = split /\n/, $wrapper->wrap($entry_text);
 
     map s/\x1D/[Y]/g, @lines;
     map s/\x1E/[W]/g, @lines;
 
     # Insert headings before each change of letter
-    my $letter = uc(substr($entry->{label}, 0, 1));
+    my $letter = uc(substr($entry->{name}, 0, 1));
     
     if (! defined $current_letter || $current_letter ne $letter)
     {

@@ -23,6 +23,11 @@ our %event_types = (
 	performance => "Performance",
 	workshop => "Workshop",
 	youthworkshop => "Youth Workshop",
+    meetup => "Meetup",
+    film => "Film",
+    djset => "DJ Set",
+    familyworkshop => "Family Workshop",
+    music => "Music",
 );
 
 # These could probably be computed but whatever
@@ -134,7 +139,7 @@ sub from_file($)
             desc     => unicode_field($_->{"description"}),
             venue    => unicode_field($_->{"venue"}),
             type     => $event_types{$_->{"type"}},
-            by       => unicode_field($_->{"speaker"}),
+            by       => unicode_field($_->{"names"}),
             cost     => $_->{"cost"} || "",
             ages     => unicode_field($_->{"age_range"} || ""),
             cws      => unicode_field($_->{"content_note"} || ""),
@@ -145,9 +150,9 @@ sub from_file($)
             edate    => $_->{"end_date"},
             stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S") - 3600,
             etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S") - 3600,
-            friendly => $_->{"is_family_friendly"} || 0,
+            friendly => $_->{"family_friendly"} || 0,
             recorded => ($_->{"video_privacy"} || "") eq "public",
-            ticketed => $_->{"requires_ticket"} || 0,
+            ticketed => ($_->{"drop_in"} || "") eq "false",
         };
 
         # Convert £ to # because the 80s were a horrible time to ASCII.
