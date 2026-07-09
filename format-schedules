@@ -75,8 +75,12 @@ sub generate_event_detail_frames($$$@)
 
 	$on_new_page->($frame);
 
+	die "Event $event->{id} has no type" unless defined $event->{type};
+	die "Event $event->{id} has no speaker" unless defined $event->{by};
+
+	my $event_by      = $event->{by} eq "" ? "" : " by " . $event->{by};
 	my @wrapped_title = split /\n/, $event_wrapper->wrap($event->{title});
-	my @wrapped_by    = split /\n/, $event_wrapper->wrap("$event->{type} by " . $event->{by});
+	my @wrapped_by    = split /\n/, $event_wrapper->wrap($event->{type} . $event_by);
 
 	my $wrapped_first = shift @wrapped_by;
 	$wrapped_first =~ s/ by / by[C]/;
@@ -162,9 +166,10 @@ sub generate_schedule_tree($$@)
 		my $entry_frame = $first_entry_frame + $event->{id};
 
 		# Build the index entry for this event
+		my $event_by      = $event->{by} eq "" ? "" : " by " . $event->{by};
 		my $schedule_line = sprintf("[C]%s - %s  %-18.18s", $event->{start}, $event->{end}, $event->{venue});
 		my @wrapped_title = split /\n/, $index_wrapper->wrap($event->{title});
-		my @wrapped_by    = split /\n/, $index_wrapper->wrap("$event->{type} by " . $event->{by});
+		my @wrapped_by    = split /\n/, $index_wrapper->wrap($event->{type} . $event_by);
 
 		my $wrapped_first = shift @wrapped_by;
 		$wrapped_first =~ s/ by / by[C]/;

@@ -178,8 +178,9 @@ sub generate_list
             # Build the index entry for this event
 #           my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
             my $schedule_line = "[C]$event->{start} - $event->{end}";
+            my $event_by      = $event->{by} eq "" ? "" : " by " . $event->{by};
             my @wrapped_title = split /\n/, $wrapper->wrap($event->{title});
-            my @wrapped_by    = split /\n/, $wrapper->wrap("$event->{type} by " . $event->{by});
+            my @wrapped_by    = split /\n/, $wrapper->wrap($event->{type} . $event_by);
 
             my $wrapped_first = shift @wrapped_by;
             $wrapped_first =~ s/ by / by[C]/;
