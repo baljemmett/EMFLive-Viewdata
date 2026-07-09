@@ -43,3 +43,10 @@ finished: Thank you for using the EMF 2024 reminder call service from microwavep
 internal-error: Sorry, something has gone wrong. Your call cannot continue; please hang up and try again later.
 internal-error-outgoing: This is the EMF 2024 reminder call service. Unfortunately something has gone wrong; we know we were supposed to call you now, but not why. We apologise for the inconvenience.
 time-message: This is your requested reminder call.  It is now
+hydration-welcome: Welcome to the EMF 2026 hydration reminder service.
+hydration-enabled: Hydration reminders are turned on for this number.  Please press 1 if you want to turn them off.
+hydration-disabled: Hydration reminders are turned off for this number.  Please press 1 if you want to turn them on.
+hydration-now-enabled: Hydration reminders are now turned on for this number.  You will be called every 30 minutes with a reminder.
+hydration-now-disabled: Hydration reminders are now turned off for this number.
+hydration-call-back: Please call back at any time to change this setting.
+hydration-reminder: This is your hydration reminder; please remember to drink some water!  You can call back at any time to stop these calls.

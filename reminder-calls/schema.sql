@@ -69,6 +69,17 @@ create table history (
 
 create index history_reminder on history(reminder_id);
 
+--
+create table hydration_subscriptions (
+    hydration_id integer primary key generated always as identity,
+    phone_number text not null,
+    subscribed timestamp with time zone not null,
+    next_reminder timestamp with time zone not null,
+    unsubscribed timestamp with time zone null
+);
+
+create index hydration_subscription on hydration_subscriptions(phone_number, unsubscribed);
+
 -- Set timezone (because the server is hopefully running in UTC!) and
 -- allow the 'asterisk' user to do what it needs to do.
 alter database emf_reminders set timezone to 'Europe/London';

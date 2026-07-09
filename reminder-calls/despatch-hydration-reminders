@@ -1,0 +1,104 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use DBI;
+
+# Define name and number used for outgoing caller ID
+my $service_name = "Hydration Reminder";
+my $service_number = 49372;
+
+# Define Asterisk context and extension number to be used for outgoing calls
+# This should be bound to the `reminder_callback` function from `service.lua`
+my $callback_context = "emf_outbound";
+my $callback_extension = "hydration";
+
+# Working directory for temporary files, and Asterisk outgoing call directory
+my $workdir = "/var/spool/asterisk/tmp";
+my $spooldir = "/var/spool/asterisk/outgoing";
+
+# Connect to our database first of all, otherwise there's nothing we can do!
+my $db = DBI->connect("dbi:Pg:service=emf_reminders", '', '', {AutoCommit => 1, PrintError => 0, RaiseError => 0});
+die "Failed to connect to database: $DBI::errstr" unless $db;
+
+my $reschedule;
+
+# Despatcher subroutine for placing hydration reminder calls via Asterisk call files
+sub despatch_via_asterisk($$)
+{
+    my $id = shift;
+    my $user_number = shift;
+
+    my %fields = (
+        Channel => "PJSIP/$user_number\@emf-hydra",
+        Callerid => "\"$service_name\" <$service_number>",
+        Context => $callback_context,
+        Extension => $callback_extension,
+        Priority => 1,
+        Setvar => "HydrationId=$id",
+        Archive => "yes"
+    );
+
+    my $filename = "hydration-$id";
+    my $workfilename = "$workdir/$filename";
+    my $spoolfilename = "$spooldir/$filename";
+    my $error;
+
+    # First time around, initialise prepared statements for updating status
+    if (! defined $reschedule)
+    {
+        $reschedule = $db->prepare("UPDATE hydration_subscriptions SET next_reminder = NOW() + INTERVAL '15' SECOND WHERE hydration_id = ?");
+    }
+
+    # Create the temporary file...
+    if (! open my $file, ">", $workfilename)
+    {
+        $error = "Failed to despatch via Asterisk; could not create $workfilename: $!";
+    }
+
+    # ... populate it...
+    elsif (! print $file join("\n", map "$_: $fields{$_}", keys %fields))
+    {
+        $error = "Failed to despatch via Asterisk; could not write to $workfilename: $!\n";
+    }
+
+    # ... done with it...
+    elsif (! close $file)
+    {
+        $error = "Failed to despatch via Asterisk; could not close $workfilename: $!\n";
+    }
+
+    # ... so move it into the spool directory...
+    elsif (! rename $workfilename, $spoolfilename)
+    {
+        $error = "Failed to despatch via Asterisk; could not enqueue $spoolfilename: $!\n";
+    }
+
+    # ... and reschedule the next call for this subscriber.
+    else
+    {
+        $reschedule->execute($id);
+#        $add_history->execute($id, "Despatched via Asterisk call file $spoolfilename.");
+    }
+
+    # If anything went wrong above, report via stderr and reminder history log
+    if (defined $error)
+    {
+        print STDERR $error, "\n";
+#        $add_history->execute($id, $error);
+    }
+}
+
+# Get all pending reminders from database and despatch each in turn.
+my $pending = $db->selectall_hashref("SELECT hydration_id, phone_number FROM hydration_subscriptions WHERE unsubscribed IS NULL AND next_reminder <= NOW()", "hydration_id");
+
+if (! defined $pending)
+{
+    print STDERR "Failed to read outstanding reminders: ", $db->errstr, "\n";
+}
+
+for my $reminder (values %$pending)
+{
+    print "Despatching hydration reminder $reminder->{hydration_id} for caller $reminder->{phone_number}\n";
+    despatch_via_asterisk($reminder->{hydration_id}, $reminder->{phone_number});
+}
