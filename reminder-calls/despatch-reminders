@@ -14,7 +14,7 @@ my $callback_context = "callbacks";
 my $callback_extension = 986;
 
 # Working directory for temporary files, and Asterisk outgoing call directory
-my $workdir = "/tmp";
+my $workdir = "/var/spool/asterisk/tmp";
 my $spooldir = "/var/spool/asterisk/outgoing";
 
 # Connect to our database first of all, otherwise there's nothing we can do!
