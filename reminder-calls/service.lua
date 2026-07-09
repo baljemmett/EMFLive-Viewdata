@@ -179,7 +179,7 @@ reminder_add = function(caller)
         -- An empty time string means the user dialled * first...
         elseif time == "" then
             -- ... so read the reminder code instead of a time
-            app.Read("code", "", 6, "s")
+            app.Read("code", "silence/1", 6, "s")
             local code = channel["code"]:get()
             app.Verbose(1, "User entered code " .. code)
 
@@ -379,6 +379,7 @@ end;
 -- Wrapper to be called from the context/extension table entry.
 reminder_extension = function(ctx, ext)
     caller = channel.CALLERID("num"):get()
+    app.Verbose(1, "Call to reminder call service from " .. caller)
     app.Answer(250)
     reminder_call_service(caller)
     app.Hangup()
