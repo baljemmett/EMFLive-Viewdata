@@ -4,6 +4,7 @@ dofile("/opt/remindercalls/service.lua")
 extensions = {
     emf_inbound = {
         ["remindercalls"] = reminder_extension;
+        [2576] = reminder_extension;
     };
 
     emf_outbound = {
