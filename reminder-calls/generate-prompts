@@ -43,3 +43,6 @@ finished: Thank you for using the EMF 2024 reminder call service from microwavep
 internal-error: Sorry, something has gone wrong. Your call cannot continue; please hang up and try again later.
 internal-error-outgoing: This is the EMF 2024 reminder call service. Unfortunately something has gone wrong; we know we were supposed to call you now, but not why. We apologise for the inconvenience.
 time-message: This is your requested reminder call.  It is now
+blocked: The reminder call service is not available for this number.
+confirm-block: Press 1 to confirm you wish to disable the reminder call service for this number.
+block-confirmed: The reminder call service is now disabled for this number.

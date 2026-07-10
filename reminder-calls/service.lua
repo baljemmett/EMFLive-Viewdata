@@ -4,6 +4,26 @@ reminder_confirm = function()
     return channel["confirm"]:get() == "1"
 end;
 
+-- Helper function to check if a number is blocked from the service
+reminder_is_blocked = function(caller)
+    local blocks = channel.REMINDERCALLS_IsPhoneNumberBlocked(caller):get()
+    if blocks == nil or blocks == "" then blocks = "0" end
+    return tonumber(blocks) > 0
+end;
+
+-- Confirmation flow for blocking the current caller from the service
+reminder_handle_block_request = function(caller)
+    app.Read("confirm", "reminder-call/prompts/confirm-block", 1, "s")
+    if channel["confirm"]:get() == "1" then
+        channel.REMINDERCALLS_BlockPhoneNumber(caller):get()
+        app.Playback("reminder-call/prompts/block-confirmed")
+        app.Hangup()
+        return true
+    else
+        return false
+    end
+end;
+
 -- Read out a time (hours and minutes as two-digit strings) 
 -- with optional day (mon-fri, tod, tom - nil or "" to skip)
 reminder_read_time = function(day, hours, minutes)
@@ -179,12 +199,24 @@ reminder_add = function(caller)
         -- An empty time string means the user dialled * first...
         elseif time == "" then
             -- ... so read the reminder code instead of a time
-            app.Read("code", "silence/1", 6, "s")
+            app.Read("code", "silence/1", 6, "st(*)")
             local code = channel["code"]:get()
+
+            -- a ** is a request to block this number
+            if code == "" then
+                app.Verbose(1, "User entered empty code")
+                return reminder_handle_block_request(caller)
+            end
+            
             app.Verbose(1, "User entered code " .. code)
 
             -- If the 'add by code' flow succeeds, we're done.
             if reminder_add_code(caller, code) then return end
+
+        -- A time of 9999 is a request to block this number
+        elseif time == "9999" then
+            app.Verbose(1, "User entered a time of 9999")
+            return reminder_handle_block_request(caller)
 
         -- A four-digit number is potentially a valid time, so
         -- try the 'add by time' flow; if it succeeds, we're done
@@ -355,6 +387,8 @@ reminder_call_menu = function(caller)
         return reminder_review_all(caller)
     elseif menu == "3" then
         return reminder_cancel_all(caller)
+    elseif menu == "9" then
+        return reminder_handle_block_request(caller)
     else
         app.Playback("reminder-call/prompts/not-recognised")
         return false
@@ -363,6 +397,11 @@ end;
 
 -- Handle the top-level reminder call service prompts.
 reminder_call_service = function(caller)
+    if reminder_is_blocked(caller) then
+        app.Playback("silence/1&reminder-call/prompts/blocked&silence/1")
+        return
+    end
+
     app.Playback("silence/1&reminder-call/prompts/welcome")
 
     if reminder_call_pending_count(caller) == 0 then

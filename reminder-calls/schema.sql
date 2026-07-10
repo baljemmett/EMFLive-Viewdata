@@ -69,6 +69,16 @@ create table history (
 
 create index history_reminder on history(reminder_id);
 
+-- List of phones that have been blocked from using the service
+create table blocked (
+    block_id integer primary key generated always as identity,
+    phone_number text not null,
+    blocked_at timestamp with time zone not null,
+    reason text not null
+);
+
+create index blocked_phone_numbers on blocked(phone_number);
+
 -- Set timezone (because the server is hopefully running in UTC!) and
 -- allow the 'asterisk' user to do what it needs to do.
 alter database emf_reminders set timezone to 'Europe/London';
