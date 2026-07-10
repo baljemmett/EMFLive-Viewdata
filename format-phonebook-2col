@@ -38,12 +38,6 @@ else
 $TelstarFrame::directory = $directory;
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
 
-my @header = (
-    "[R][n][D][Y]PHONE BOOK:[W]Not Available in Yellow",
-    "",
-    "",
-);
-
 my $on_new_page = sub {
     my $frame = shift;
     $frame->set_route(0, 5);	# Route 0 back to phones index
@@ -51,119 +45,136 @@ my $on_new_page = sub {
     1;
 };
 
-my $frame = new TelstarFrame($frame_number);
-my $paginator = new Paginator($frame,
-{
-    header => \@header,
-    continues => "",
-    continued => "",
-    on_new_page => $on_new_page,
-});
-
-$on_new_page->($frame);
-
-# We're going to use the ASCII separator-characters trick to encode attribute
-# changes, since an attribute change takes up a character cell but the markup
-# for them takes up three which'll screw up line length calculations...
-my $wrapper = Text::Wrapper->new(columns => 19,
-                                 par_start => "",
-                                 body_start => "\x1E" . " "x$name_indent,
-                                 wrap_after => "\x1D\x1E/-");
-
-# Sort names into columns with a maximum height, ordered alphabetically
-my $current_letter = "";
-my @columns = ([]);
-my $height = 18;
-
 sub by_name
 {
     uc($a->{name}) cmp uc($b->{name});
 }
 
-for my $entry (sort by_name @$full_list)
+my @entries = sort by_name @$full_list;
+
+# We're going to use the ASCII separator-characters trick to encode attribute
+# changes, since an attribute change takes up a character cell but the markup
+# for them takes up three which'll screw up line length calculations...
+my $wrapper = Text::Wrapper->new(columns => 19,
+                                par_start => "",
+                                body_start => "\x1E" . " "x$name_indent,
+                                wrap_after => "\x1D\x1E/-");
+
+sub generate_section($$@)
 {
-    my $entry_text = "";
-    my $first_line = undef;
+    my $frame_number = shift;
+    my $section_title = shift;
+    my @entries = @_;
 
-    if ($entry->{mnemonic})
+    my @header = (
+        "[R][n][D][Y]PHONE BOOK:[W]$section_title",
+        "",
+        "",
+    );
+
+    my $frame = new TelstarFrame($frame_number);
+    my $paginator = new Paginator($frame,
     {
-        $first_line = sprintf("\x1D%6s (%s)", $entry->{number}, $entry->{mnemonic});
-        $entry_text = "\x1E" . (" "x$name_indent);
-    }
-    else
+        header => \@header,
+        continues => "",
+        continued => "",
+        on_new_page => $on_new_page,
+    });
+
+    $on_new_page->($frame);
+
+    # Sort names into columns with a maximum height, ordered alphabetically
+    my $current_letter = "";
+    my @columns = ([]);
+    my $height = 18;
+
+    for my $entry (@entries)
     {
-        $entry_text = sprintf("\x1D%6s\x1E", $entry->{number});
+        my $entry_text = "";
+        my $first_line = undef;
+
+        if ($entry->{mnemonic})
+        {
+            $first_line = sprintf("\x1D%6s (%s)", $entry->{number}, $entry->{mnemonic});
+            $entry_text = "\x1E" . (" "x$name_indent);
+        }
+        else
+        {
+            $entry_text = sprintf("\x1D%6s\x1E", $entry->{number});
+        }
+
+        $entry_text .= unidecode($entry->{name});
+
+        my @lines = split /\n/, $wrapper->wrap($entry_text);
+        unshift @lines, $first_line if defined $first_line;
+
+        my $letter = uc(substr($entry->{name}, 0, 1));
+        
+        # Add a letter heading if needed
+        if ($current_letter ne $letter)
+        {
+            my @heading = ("", "     \x1E..:\x1D${letter}\x1E:..\x1E", "");
+            unshift @lines, @heading;
+
+            # Remove the leading blank line for the first section heading only
+            # (we'll take care of removing it from the top of any later columns
+            # as we add them, but the first column already exists...)
+            shift @lines if ! defined $current_letter;
+
+            $current_letter = $letter;
+        }
+
+        # If the entire entry, plus heading if present, doesn't fit in the
+        # current column we need to create a new one to put it in instead.
+        if (@{$columns[-1]} + @lines > $height)
+        {
+            push @columns, [ ];
+
+            # Remove leading blank line if a letter heading is present.
+            shift @lines if $lines[0] eq "";
+        }
+
+        push @{$columns[-1]}, @lines;
     }
 
-    $entry_text .= unidecode($entry->{name});
+    # Add an empty column if we've ended up with an odd number, to avoid
+    # special-casing the last page during layout.
+    push @columns, [] if @columns % 2 != 0;
 
-    my @lines = split /\n/, $wrapper->wrap($entry_text);
-    unshift @lines, $first_line if defined $first_line;
-
-    my $letter = uc(substr($entry->{name}, 0, 1));
-    
-    # Add a letter heading if needed
-    if ($current_letter ne $letter)
+    # Now lay columns out pairwise on frames
+    while (@columns)
     {
-        my @heading = ("", "     \x1E..:\x1D${letter}\x1E:..\x1E", "");
-        unshift @lines, @heading;
+        my $left  = shift @columns;
+        my $right = shift @columns;
 
-        # Remove the leading blank line for the first section heading only
-        # (we'll take care of removing it from the top of any later columns
-        # as we add them, but the first column already exists...)
-        shift @lines if ! defined $current_letter;
+        # Make sure the two columns are the same length by padding with blanks
+        while ($#$left < $#$right)
+        {
+            push @$left, "";
+        }
 
-        $current_letter = $letter;
+        while ($#$left > $#$right)
+        {
+            push @$right, "";
+        }
+
+        # Glue columns together
+        my @lines = map
+            sprintf("%-20.20s%-20.20s", $left->[$_], $right->[$_]),
+            0..$#$left;
+
+        # Convert ASCII separator codes to markup, trim trailing whitespace
+        map s/\x1D/[Y]/g, @lines;
+        map s/\x1E/[W]/g, @lines;
+        map s/\x1F/[B]/g, @lines;
+        map s/\s+$//, @lines;
+
+        # Emplace in frame and start new one if we've any columns left    
+        $paginator->add_text_block(@lines);
+        $paginator->new_page() unless @columns == 0;
     }
 
-    # If the entire entry, plus heading if present, doesn't fit in the
-    # current column we need to create a new one to put it in instead.
-    if (@{$columns[-1]} + @lines > $height)
-    {
-        push @columns, [ ];
-
-        # Remove leading blank line if a letter heading is present.
-        shift @lines if $lines[0] eq "";
-    }
-
-    push @{$columns[-1]}, @lines;
+    $paginator->finish();
 }
 
-# Add an empty column if we've ended up with an odd number, to avoid
-# special-casing the last page during layout.
-push @columns, [] if @columns % 2 != 0;
-
-# Now lay columns out pairwise on frames
-while (@columns)
-{
-    my $left  = shift @columns;
-    my $right = shift @columns;
-
-    # Make sure the two columns are the same length by padding with blanks
-    while ($#$left < $#$right)
-    {
-        push @$left, "";
-    }
-
-    while ($#$left > $#$right)
-    {
-        push @$right, "";
-    }
-
-    # Glue columns together
-    my @lines = map
-        sprintf("%-20.20s%-20.20s", $left->[$_], $right->[$_]),
-        0..$#$left;
-
-    # Convert ASCII separator codes to markup, trim trailing whitespace
-    map s/\x1D/[Y]/g, @lines;
-    map s/\x1E/[W]/g, @lines;
-    map s/\x1F/[B]/g, @lines;
-    map s/\s+$//, @lines;
-
-    # Emplace in frame and start new one if we've any columns left    
-    $paginator->add_text_block(@lines);
-    $paginator->new_page() unless @columns == 0;
-}
-
-$paginator->finish();
+generate_section(51, "Not Available in Yellow", @entries);
