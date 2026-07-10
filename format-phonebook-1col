@@ -79,7 +79,8 @@ sub by_name
 
 for my $entry (sort by_name @$full_list)
 {
-    my $entry_text = sprintf("%6s", $entry->{number}) . "\x1E" . unidecode($entry->{name});
+    my $mnemonic = $entry->{mnemonic} ? " ($entry->{mnemonic})" : "";
+    my $entry_text = sprintf("%6s", $entry->{number}) . $mnemonic . "\x1E" . unidecode($entry->{name});
     my @lines = split /\n/, $wrapper->wrap($entry_text);
 
     map s/\x1D/[Y]/g, @lines;

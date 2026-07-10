@@ -13,6 +13,7 @@ use Getopt::Long;
 my $directory = "newframes";
 my $year = 2024;
 my $frame_number = 51;
+my $name_indent = 4;
 
 GetOptions("year=s" => \$year,
            "directory=s" => \$directory) or die "Error in command line arguments.";
@@ -65,8 +66,8 @@ $on_new_page->($frame);
 # changes, since an attribute change takes up a character cell but the markup
 # for them takes up three which'll screw up line length calculations...
 my $wrapper = Text::Wrapper->new(columns => 19,
-                                 par_start => "\x1D",
-                                 body_start => " "x5,
+                                 par_start => "",
+                                 body_start => "\x1E" . " "x$name_indent,
                                  wrap_after => "\x1D\x1E/-");
 
 # Sort names into columns with a maximum height, ordered alphabetically
@@ -81,8 +82,23 @@ sub by_name
 
 for my $entry (sort by_name @$full_list)
 {
-    my $entry_text = sprintf("%6s", $entry->{number}) . "\x1E" . unidecode($entry->{name});
+    my $entry_text = "";
+    my $first_line = undef;
+
+    if ($entry->{mnemonic})
+    {
+        $first_line = sprintf("\x1D%6s (%s)", $entry->{number}, $entry->{mnemonic});
+        $entry_text = "\x1E" . (" "x$name_indent);
+    }
+    else
+    {
+        $entry_text = sprintf("\x1D%6s\x1E", $entry->{number});
+    }
+
+    $entry_text .= unidecode($entry->{name});
+
     my @lines = split /\n/, $wrapper->wrap($entry_text);
+    unshift @lines, $first_line if defined $first_line;
 
     my $letter = uc(substr($entry->{name}, 0, 1));
     
