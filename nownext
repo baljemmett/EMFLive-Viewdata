@@ -220,8 +220,8 @@ sub generate_list
 generate_list(\%venues, 21, 21, "Stage A");
 generate_list(\%venues, 22, 22, "Stage B");
 generate_list(\%venues, 23, 23, "Stage C");
-generate_list(\%venues, 24, 24, grep /Workshop/, @all_venues);
-generate_list(\%venues, 25, 25, grep /Sector/, @all_venues);
-generate_list(\%venues, 26, 26, grep !/Stage|Workshop|Sector/, @all_venues);
+generate_list(\%venues, 24, 24, grep /Stage D|Sector/, @all_venues);
+generate_list(\%venues, 25, 25, grep /Workshop|Nationwide/, @all_venues);
+generate_list(\%venues, 26, 26, grep !/Stage|Workshop|Nationwide|Sector/, @all_venues);
 generate_list(\%venues, 27, 27, grep /Stage/, @all_venues);
 generate_list(\%venues, 29, 29, @all_venues);
