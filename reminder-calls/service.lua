@@ -6,9 +6,27 @@ end;
 
 -- Helper function to check if a number is blocked from the service
 reminder_is_blocked = function(caller)
+    -- We can't return a call to an anonymous caller!
+    if caller == "anonymous" then
+        app.Verbose(1, "Anonymous caller, treating as blocked.")
+        return true
+
+        -- Caller ID of more than 6 digits has come from outside numbers;
+    -- we can't place calls to the PSTN so these are de-facto blocked.
+    elseif string.len(caller) > 6 then
+        app.Verbose(1, "External call from " .. caller .. ", treating as blocked.")
+        return true
+    end
+
     local blocks = channel.REMINDERCALLS_IsPhoneNumberBlocked(caller):get()
     if blocks == nil or blocks == "" then blocks = "0" end
-    return tonumber(blocks) > 0
+
+    if tonumber(blocks) > 0 then
+        app.Verbose(1, "Call from " .. caller .. " blocked by request.")
+        return true
+    else
+        return false
+    end
 end;
 
 -- Confirmation flow for blocking the current caller from the service
