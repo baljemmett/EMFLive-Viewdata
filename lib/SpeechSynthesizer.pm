@@ -140,8 +140,15 @@ sub generate_piper($$)
 
 sub generate($$)
 {
+
     my $text = shift;
     my $filename = shift;
+
+    if (-f "$pcm_dir/$filename.ulaw")
+    {
+        print "$pcm_dir/$filename.ulaw already exists, not re-generating.\n";
+        return 1;
+    }
 
     if ($mode eq "piper")
     {
