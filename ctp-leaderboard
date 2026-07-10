@@ -50,9 +50,9 @@ my @header = (
     "[b][m.]",
 );
 
-my $frame = new TelstarFrame(53);
+my $frame = new TelstarFrame(504);
 $frame->set_route(0, 5);    # 0 back to index
-$frame->set_route(1, 52);   # 1 to info page
+$frame->set_route(1, 503);  # 1 to info page
 $frame->{"navmessage-select"} = "[R][n][W]Press[Y]0[W]for phones index.";
 $frame->{"navmessage-notfound"} = "[R][n][W]Not found! Press[Y]0[W]for phones index.";
 
