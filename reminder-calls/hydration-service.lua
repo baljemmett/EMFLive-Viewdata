@@ -4,29 +4,87 @@ hydration_confirm = function()
     return channel["confirm"]:get() == "1"
 end;
 
+-- Helper function to check if a number is blocked from the service
+-- For the time being, share the block list with the main reminder call service
+hydration_is_blocked = function(caller)
+    -- We can't return a call to an anonymous caller!
+    if caller == "anonymous" then
+        app.Verbose(1, "Anonymous caller, treating as blocked.")
+        return true
+
+    -- Caller ID of more than 6 digits has come from outside numbers;
+    -- we can't place calls to the PSTN so these are de-facto blocked.
+    elseif string.len(caller) > 6 then
+        app.Verbose(1, "External call from " .. caller .. ", treating as blocked.")
+        return true
+    end
+
+    local blocks = channel.REMINDERCALLS_IsPhoneNumberBlocked(caller):get()
+    if blocks == nil or blocks == "" then blocks = "0" end
+
+    if tonumber(blocks) > 0 then
+        app.Verbose(1, "Call from " .. caller .. " blocked by request.")
+        return true
+    else
+        return false
+    end
+end;
+
+-- Confirmation flow for blocking the current caller from the service
+hydration_handle_block_request = function(caller)
+    app.Read("confirm", "reminder-call/prompts/confirm-block", 1, "s")
+    if channel["confirm"]:get() == "1" then
+        channel.REMINDERCALLS_BlockPhoneNumber(caller):get()
+        app.Playback("reminder-call/prompts/block-confirmed")
+        app.Hangup()
+    end
+end;
+
+-- Check if the caller is currently subscribed to hydration reminders
 hydration_enabled = function(caller)
     local enabled_count = channel.HYDRATION_IsNumberSubscribed(caller):get()
     return tonumber(enabled_count) > 0
 end;
 
+-- Ask the user if they want to enable hydration reminders and do so if required
 hydration_enable = function(caller)
     app.Read("confirm", "reminder-call/prompts/hydration-disabled", 1, "s")
-    if channel["confirm"]:get() == "1" then
+    local response = channel["confirm"]:get()
+
+    if response == "1" then
+        -- Pressing 1 was a confirmation that they wish to subscribe...
         channel.HYDRATION_SubscribeNumber(caller):set("")
         app.Playback("reminder-call/prompts/hydration-now-enabled")
+
+    elseif response == "9" then
+        -- Pressing 9 was a request to block the service on this number
+        hydration_handle_block_request(caller)
     end
 end;
 
+-- Ask the user if they want to disable hydration reminders and do so if required
 hydration_disable = function(caller)
     app.Read("confirm", "reminder-call/prompts/hydration-enabled", 1, "s")
-    if channel["confirm"]:get() == "1" then
+    local response = channel["confirm"]:get()
+
+    if response == "1" then
+        -- Pressing 1 was a confirmation that they wish to subscribe...
         channel.HYDRATION_UnsubscribeNumber(caller):set("")
         app.Playback("reminder-call/prompts/hydration-now-disabled")
+
+    elseif response == "9" then
+        -- Pressing 9 was a request to block the service on this number
+        hydration_handle_block_request(caller)
     end
 end;
 
 -- Handle the top-level hydration reminder call service prompts.
 hydration_call_service = function(caller)
+    if hydration_is_blocked(caller) then
+        app.Playback("silence/1&reminder-call/prompts/blocked&silence/1")
+        return
+    end
+
     app.Playback("silence/1&reminder-call/prompts/hydration-welcome")
 
     if hydration_enabled(caller) then
