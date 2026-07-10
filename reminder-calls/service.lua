@@ -101,7 +101,7 @@ reminder_add_time = function(caller, time)
     end
 
     -- Turn hh:mm into a proper timestamp, starting from today's date
-    local now_time = os.time()              -- get right now as time_t
+    local now_time = os.time() + 3600       -- get right now as time_t
     local now = os.date("*t", now_time)     -- format into table
     local reminder = now                    -- take a copy of it
 
