@@ -66,7 +66,7 @@ $on_new_page->($frame);
 # for them takes up three which'll screw up line length calculations...
 my $wrapper = Text::Wrapper->new(columns => 39,
                                  par_start => "\x1D",
-                                 body_start => " "x6,
+                                 body_start => " "x8,
                                  wrap_after => "\x1D\x1E/-");
 
 # Now trundle through the list, alphabetically
@@ -79,7 +79,7 @@ sub by_name
 
 for my $entry (sort by_name @$full_list)
 {
-    my $entry_text = $entry->{number} . "\x1E" . unidecode($entry->{name});
+    my $entry_text = sprintf("%6s", $entry->{number}) . "\x1E" . unidecode($entry->{name});
     my @lines = split /\n/, $wrapper->wrap($entry_text);
 
     map s/\x1D/[Y]/g, @lines;

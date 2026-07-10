@@ -64,9 +64,9 @@ $on_new_page->($frame);
 # We're going to use the ASCII separator-characters trick to encode attribute
 # changes, since an attribute change takes up a character cell but the markup
 # for them takes up three which'll screw up line length calculations...
-my $wrapper = Text::Wrapper->new(columns => 20,
+my $wrapper = Text::Wrapper->new(columns => 19,
                                  par_start => "\x1D",
-                                 body_start => " "x6,
+                                 body_start => " "x5,
                                  wrap_after => "\x1D\x1E/-");
 
 # Sort names into columns with a maximum height, ordered alphabetically
@@ -81,7 +81,7 @@ sub by_name
 
 for my $entry (sort by_name @$full_list)
 {
-    my $entry_text = $entry->{number} . "\x1E" . unidecode($entry->{name});
+    my $entry_text = sprintf("%6s", $entry->{number}) . "\x1E" . unidecode($entry->{name});
     my @lines = split /\n/, $wrapper->wrap($entry_text);
 
     my $letter = uc(substr($entry->{name}, 0, 1));
