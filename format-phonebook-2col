@@ -60,10 +60,11 @@ my $wrapper = Text::Wrapper->new(columns => 19,
                                 body_start => "\x1E" . " "x$name_indent,
                                 wrap_after => "\x1D\x1E/-");
 
-sub generate_section($$@)
+sub generate_section($$$@)
 {
     my $frame_number = shift;
     my $section_title = shift;
+    my $type_filter = shift;
     my @entries = @_;
 
     my @header = (
@@ -90,6 +91,8 @@ sub generate_section($$@)
 
     for my $entry (@entries)
     {
+        next if defined $type_filter && $entry->{type} ne $type_filter;
+
         my $entry_text = "";
         my $first_line = undef;
 
@@ -177,4 +180,12 @@ sub generate_section($$@)
     $paginator->finish();
 }
 
-generate_section(51, "Not Available in Yellow", @entries);
+generate_section(51, "Not Available in Yellow", undef, @entries);
+generate_section(52, "Important Numbers", "IMPORTANT", @entries);
+generate_section(53, "Orga Numbers", "ORGA", @entries);
+generate_section(54, "Services", "SERVICE", @entries);
+generate_section(55, "Villages", "VILLAGE", @entries);
+generate_section(56, "People", "PERSON", @entries);
+generate_section(57, "Public Telephones", "PUBLIC", @entries);
+generate_section(58, "Fax Lines", "FAX", @entries);
+generate_section(59, "Modem Lines", "MODEM", @entries);
