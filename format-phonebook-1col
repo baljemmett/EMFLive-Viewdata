@@ -48,7 +48,14 @@ sub by_name
     uc($a->{name}) cmp uc($b->{name});
 }
 
-my @entries = sort by_name @$full_list;
+sub massage
+{
+    my $entry = shift;
+    $entry->{type} ||= "PERSON";
+    $entry;
+}
+
+my @entries = map { massage($_) } sort by_name @$full_list;
 
 # We're going to use the ASCII separator-characters trick to encode attribute
 # changes, since an attribute change takes up a character cell but the markup
