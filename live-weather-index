@@ -28,7 +28,7 @@ our $days_last_mtime = 0;
 our $json = JSON::PP->new->utf8;
 
 my $broker = "mqtt.emf.camp";
-my $topic = "emf/weather";
+my $topic = "weather/hq";
 
 my $telstar = new TelstarClient;
 
@@ -139,6 +139,8 @@ sub build_page
 
     my @day_links = map day_text($_), sort keys %$days;
 
+    $#day_links = 5 unless $#day_links < 5;
+    
     $frame->add_lines(@header);
     $frame->add_line(join(" ", @day_links[0..2]));
     $frame->add_line(join(" ", @day_links[3..$#day_links]));
