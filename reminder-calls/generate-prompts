@@ -53,3 +53,10 @@ hydration-now-enabled: Hydration reminders are now turned on for this number.  Y
 hydration-now-disabled: Hydration reminders are now turned off for this number.
 hydration-call-back: Please call back at any time to change this setting.
 hydration-reminder: This is your hydration reminder; please remember to drink some water!  You can call back at any time to stop these calls.
+hydration-mode0: Hydration reminders are turned off for this number.  Please press 1 to turn them on between 10 a.m. and 10 p.m., press 2 to turn them on between 10 a.m. and 6 p.m. or press 3 to turn them on between 12 noon and 4 a.m.
+hydration-mode1: Hydration reminders are turned on for this number between 10 a.m. and 10 p.m.; please press 0 if you want to turn them off, press 2 for reminders between 10 a.m. and 6 p.m., or press 3 for reminders between 12 noon and 4 a.m.
+hydration-mode2: Hydration reminders are turned on for this number between 10 a.m. and 6 p.m.; please press 0 if you want to turn them off, press 1 for reminders between 10 a.m. and 10 p.m., or press 3 for reminders between 12 noon and 4 a.m.
+hydration-mode3: Hydration reminders are turned on for this number between 12 noon and 4 a.m.; please press 0 if you want to turn them off, press 1 for reminders between 10 a.m. and 10 p.m., or press 2 for reminders between 10 a.m. and 6 p.m.
+hydration-now-mode1: Hydration reminders are now turned on for this number between 10 a.m. and 10 p.m.; you will be called every 30 minutes with a reminder.
+hydration-now-mode2: Hydration reminders are now turned on for this number between 10 a.m. and 6 p.m.; you will be called every 30 minutes with a reminder.
+hydration-now-mode3: Hydration reminders are now turned on for this number between 12 noon and 4 a.m.; you will be called every 30 minutes with a reminder.

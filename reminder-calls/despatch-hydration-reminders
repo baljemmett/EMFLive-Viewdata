@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use DBI;
+use v5.10;
 
 # Define name and number used for outgoing caller ID
 my $service_name = "Hydration Reminder";
@@ -21,7 +22,25 @@ my $spooldir = "/var/spool/asterisk/outgoing";
 my $db = DBI->connect("dbi:Pg:service=emf_reminders", '', '', {AutoCommit => 1, PrintError => 0, RaiseError => 0});
 die "Failed to connect to database: $DBI::errstr" unless $db;
 
-my $reschedule;
+# Get all defined hours-of-operation modes and current active state
+my $modes = $db->selectall_hashref("SELECT mode_id, mode_name, between_active_hours(start_time, LOCALTIME, end_time) AS active FROM hydration_modes", "mode_id");
+if (! defined $modes)
+{
+    print STDERR "Failed to read hours of operation: ", $db->errstr, "\n";
+    exit 1;
+}
+
+my $dummy_mode = {
+    mode_id => 0,
+    mode_name => "unknown",
+    active => 0,
+};
+
+sub reschedule()
+{
+    state $reschedule = $db->prepare("UPDATE hydration_subscriptions SET next_reminder = NOW() + INTERVAL '15' SECOND WHERE hydration_id = ?");
+    $reschedule;
+}
 
 # Despatcher subroutine for placing hydration reminder calls via Asterisk call files
 sub despatch_via_asterisk($$)
@@ -43,12 +62,6 @@ sub despatch_via_asterisk($$)
     my $workfilename = "$workdir/$filename";
     my $spoolfilename = "$spooldir/$filename";
     my $error;
-
-    # First time around, initialise prepared statements for updating status
-    if (! defined $reschedule)
-    {
-        $reschedule = $db->prepare("UPDATE hydration_subscriptions SET next_reminder = NOW() + INTERVAL '15' SECOND WHERE hydration_id = ?");
-    }
 
     # Create the temporary file...
     if (! open my $file, ">", $workfilename)
@@ -77,7 +90,7 @@ sub despatch_via_asterisk($$)
     # ... and reschedule the next call for this subscriber.
     else
     {
-        $reschedule->execute($id);
+        reschedule()->execute($id);
 #        $add_history->execute($id, "Despatched via Asterisk call file $spoolfilename.");
     }
 
@@ -90,7 +103,7 @@ sub despatch_via_asterisk($$)
 }
 
 # Get all pending reminders from database and despatch each in turn.
-my $pending = $db->selectall_hashref("SELECT hydration_id, phone_number FROM hydration_subscriptions WHERE unsubscribed IS NULL AND next_reminder <= NOW()", "hydration_id");
+my $pending = $db->selectall_hashref("SELECT hydration_id, mode_id, phone_number FROM hydration_subscriptions WHERE unsubscribed IS NULL AND next_reminder <= NOW()", "hydration_id");
 
 if (! defined $pending)
 {
@@ -99,6 +112,16 @@ if (! defined $pending)
 
 for my $reminder (values %$pending)
 {
-    print "Despatching hydration reminder $reminder->{hydration_id} for caller $reminder->{phone_number}\n";
-    despatch_via_asterisk($reminder->{hydration_id}, $reminder->{phone_number});
+    my $mode = $modes->{$reminder->{mode_id}} || $dummy_mode;
+
+    if ($mode->{active})
+    {
+        print "Despatching hydration reminder $reminder->{hydration_id} ($mode->{mode_name}) for caller $reminder->{phone_number}\n";
+        despatch_via_asterisk($reminder->{hydration_id}, $reminder->{phone_number});
+    }
+    else
+    {
+        print "Ignoring hydration reminder $reminder->{hydration_id} for caller $reminder->{phone_number} as $mode->{mode_name} hours not active.\n";
+        reschedule()->execute($reminder->{hydration_id});
+    }
 }

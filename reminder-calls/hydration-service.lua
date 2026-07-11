@@ -1,7 +1,17 @@
+-- Global kill switch for the mode menus - if disabled, everyone gets set to mode 1
+hydration_support_modes = true;
+
 -- Helper function to ask the user to confirm setting a hydration
 hydration_confirm = function()
     app.Read("confirm", "reminder-call/prompts/set-confirm", 1, "s")
     return channel["confirm"]:get() == "1"
+end;
+
+-- Retrieve the current hydration subscription mode or 0 if not subscribed
+hydration_mode = function(caller)
+    local selected_mode = channel.HYDRATION_GetSubscriptionMode(caller):get()
+    app.Verbose(1, "Current subscription mode for caller " .. caller .. " is " .. selected_mode)
+    return tonumber(selected_mode)
 end;
 
 -- Check if the caller is currently subscribed to hydration reminders
@@ -58,7 +68,7 @@ hydration_enable = function(caller)
 
     if response == "1" then
         -- Pressing 1 was a confirmation that they wish to subscribe...
-        channel.HYDRATION_SubscribeNumber(caller):set("")
+        channel.HYDRATION_SubscribeNumber(caller, 1):set("")
         app.Playback("reminder-call/prompts/hydration-now-enabled")
 
     elseif response == "9" then
@@ -83,6 +93,29 @@ hydration_disable = function(caller)
     end
 end;
 
+-- Read out the user's current subscription mode and allow them to change it
+hydration_mode_menu = function(caller, current_mode)
+    app.Read("confirm", "reminder-call/prompts/hydration-mode" .. tostring(current_mode), 1, "s")
+    local response = channel["confirm"]:get()
+
+    if response == "1" or response == "2" or response == "3" then
+        -- Pressing 1 was a confirmation that they wish to subscribe...
+        local mode = tonumber(response)
+        channel.HYDRATION_SubscribeNumber(caller, mode):set("")
+        app.Playback("reminder-call/prompts/hydration-now-mode" .. response)
+
+    elseif response == "0" then
+        -- Pressing 0 was a request to unsubscribe
+        channel.HYDRATION_UnsubscribeNumber(caller):set("")
+        app.Playback("reminder-call/prompts/hydration-now-disabled")
+
+    elseif response == "9" then
+        -- Pressing 9 was a request to block the service on this number
+        hydration_handle_block_request(caller)
+    end
+end;
+
+
 -- Handle the top-level hydration reminder call service prompts.
 hydration_call_service = function(caller)
     if hydration_is_blocked(caller) then
@@ -92,7 +125,10 @@ hydration_call_service = function(caller)
 
     app.Playback("silence/1&reminder-call/prompts/hydration-welcome")
 
-    if hydration_enabled(caller) then
+    if hydration_support_modes then
+        local mode = hydration_mode(caller)
+        hydration_mode_menu(caller, mode)
+    elseif hydration_enabled(caller) then
         hydration_disable(caller)
     else
         hydration_enable(caller)

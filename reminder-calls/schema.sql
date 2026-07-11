@@ -79,16 +79,43 @@ create table blocked (
 
 create index blocked_phone_numbers on blocked(phone_number);
 
---
+-- A set of times between which the hydration reminder service can be active
+create table hydration_modes (
+    mode_id integer primary key not null,
+    mode_name text not null,
+    start_time time with time zone not null,
+    end_time time with time zone not null
+);
+
+insert into hydration_modes (mode_id, mode_name, start_time, end_time)
+values (1, 'standard',    time with time zone '10:00 BST', time with time zone '22:00 BST'),
+       (2, 'early-night', time with time zone '10:00 BST', time with time zone '19:00 BST'),
+       (3, 'raver',       time with time zone '12:00 BST', time with time zone '04:00 BST');
+
+-- Helper function to test if a given time is between the start and end times,
+-- allowing for the fact that the active period can crcoss midnight!
+create function between_active_hours(start_time time with time zone, current time with time zone, end_time time with time zone)
+returns boolean
+language sql
+immutable
+returns null on null input
+return case when start_time > end_time then
+    current < end_time or current >= start_time
+else
+    current >= start_time and current < end_time
+end;
+
+-- List of users who have (ever) subscribed to hydration reminders
 create table hydration_subscriptions (
     hydration_id integer primary key generated always as identity,
     phone_number text not null,
+    mode_id integer references hydration_modes(mode_id) not null,
     subscribed timestamp with time zone not null,
     next_reminder timestamp with time zone not null,
     unsubscribed timestamp with time zone null
 );
 
-create index hydration_subscription on hydration_subscriptions(phone_number, unsubscribed);
+create unique index hydration_subscription on hydration_subscriptions(phone_number, unsubscribed) nulls not distinct;
 
 -- Set timezone (because the server is hopefully running in UTC!) and
 -- allow the 'asterisk' user to do what it needs to do.
