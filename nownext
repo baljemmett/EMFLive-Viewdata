@@ -17,7 +17,7 @@ use Text::Wrapper;
 ###
 
 # Which year are we in, and where's the schedule file?
-my $year      = 2024;
+my $year      = 2026;
 my $filename  = "$year.json";
 my $directory = "newframes";
 

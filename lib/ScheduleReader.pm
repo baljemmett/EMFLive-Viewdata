@@ -32,11 +32,11 @@ our %event_types = (
 
 # These could probably be computed but whatever
 my %days = (
-	"2024-05-30" => "Thu",
-	"2024-05-31" => "Fri",
-	"2024-06-01" => "Sat",
-	"2024-06-02" => "Sun",
-	"2024-06-03" => "Mon",
+	"2026-07-16" => "Thu",
+	"2026-07-17" => "Fri",
+	"2026-07-18" => "Sat",
+	"2026-07-19" => "Sun",
+	"2026-07-20" => "Mon",
 );
 
 # Set of regexes used to reorder venues in the canonical list. Venues matching

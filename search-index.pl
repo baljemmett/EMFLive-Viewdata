@@ -14,7 +14,7 @@ use Paginator;
 ###
 
 # Which year are we in, and where are the index and schedule files?
-my $year     = 2024;
+my $year     = 2026;
 my $basedir  = "."
 my $filename = "$basedir/schedule.json";
 
