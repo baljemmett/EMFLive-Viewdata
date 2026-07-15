@@ -9,6 +9,7 @@ use File::stat;
 use JSON::PP;
 use TelstarClient;
 use TelstarFrame;
+use Text::Wrapper;
 use Data::Dumper;
 use POSIX qw(strftime fmod);
 
@@ -148,16 +149,35 @@ sub build_page
 
     if (keys %$obs)
     {
-        my $now = strftime("%a %H:%M:%S", localtime);
+        my $now      = strftime("%a %H:%M:%S", localtime);
+        my $humidity = sprintf("\x1EHumidity:   \x1D%d%% RH ", $obs->{humidity});
+
+        my $wrapper  = Text::Wrapper->new(columns => 39,
+                                          par_start => $humidity,
+                                          body_start => "\x1D" . " "x13,
+                                          wrap_after => "\x1D\x1E/-");
+
+        my @flex = split /\n/, $wrapper->wrap("(" . $obs->{humidex_perception} . ")");
+
+        if (@flex > 2)
+        {
+            $#flex = 1;
+            1 while (len($flex[1]) > 35 && $flex[1] =~ s/\s+\S*$//);
+            $flex[1] .= "...)";
+        }
+
+        map s/\x1D/[C]/g, @flex;
+        map s/\x1E/[Y]/g, @flex;
+
+        push @flex, sprintf("[Y]Indoors:    [C]%d deg C, %d%% RH", $obs->{tempin}, $obs->{humidityin});
+        push @flex, "" if @flex < 3;
 
         my @observations = (
             " Latest observations from the on-site",
             " weather station, as of[C]$now:",
             "",
             sprintf("[Y]Temperature:[C]%d deg C (feels like %d)", $obs->{temp}, $obs->{feelslike}),
-            sprintf("[Y]Humidity:   [C]%d%% RH (%-0.16s)", $obs->{humidity}, $obs->{humidex_perception}),
-            sprintf("[Y]Indoors:    [C]%d deg C, %d%% RH", $obs->{tempin}, $obs->{humidityin}),
-            "",
+            @flex,
             sprintf("[Y]Wind Speed: [C]%d mph (%s)", $obs->{windspeed}, cardinal($obs->{winddir})),
             sprintf("[Y]Rainfall:   [C]%d mm (hour), %d mm (day)", $obs->{hrain_piezo}, $obs->{drain_piezo}),
             "",
