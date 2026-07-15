@@ -15,13 +15,8 @@ TELSTARDIR=$(dirname $(realpath $0))
 PERL5LIB=$TELSTARDIR/lib${PERL5LIB:+:$PERL5LIB}
 export PERL5LIB
 
-# Update the guestbook and generate frames
-#[ -d output_frames ] || mkdir output_frames
-./search-phonebook.pl "$@"
+# The cached phonebook.json lives in our persistent storage
+cd "$TELSTARDIR/volume"
 
-# Push them into Telstar via the API
-#./telstar-util login telstar-api:8001 2222222222 1234
-#./telstar-util addframes telstar-api:8001 output_frames ${DATABASE:-primary}
-
-# Tidy up
-#rm -r telstar-util.tok output_frames
+# Perform the search, generating results on stdout
+../search-phonebook.pl "$@"

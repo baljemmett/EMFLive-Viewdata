@@ -2,7 +2,7 @@
 
 set -ef
 
-# Helper script to interface between Telstar and the search scripts
+# Helper script to ingest the phonebook from stdin and cache it for search
 
 # Which Telstar database are we running in?
 # Lowercase the environment variable to use as a parameter for telstar-util
@@ -15,8 +15,5 @@ TELSTARDIR=$(dirname $(realpath $0))
 PERL5LIB=$TELSTARDIR/lib${PERL5LIB:+:$PERL5LIB}
 export PERL5LIB
 
-# The search index lives in our persistent storage
-cd "$TELSTARDIR/volume"
-
-# Perform the search, generating results on stdout
-../search-index.pl "$@"
+# Read the schedule from stdin and update the persistent index files
+cat - > "$TELSTARDIR/volume/phonebook.json"

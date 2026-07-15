@@ -2,7 +2,7 @@
 
 set -ef
 
-# Helper script to interface between Telstar and the search scripts
+# Helper script to ingest the schedule from stdin and index it
 
 # Which Telstar database are we running in?
 # Lowercase the environment variable to use as a parameter for telstar-util
@@ -15,8 +15,9 @@ TELSTARDIR=$(dirname $(realpath $0))
 PERL5LIB=$TELSTARDIR/lib${PERL5LIB:+:$PERL5LIB}
 export PERL5LIB
 
-# The search index lives in our persistent storage
-cd "$TELSTARDIR/volume"
+# Copy the schedule from stdin to our persistent cache
+SCHEDULE="$TELSTARDIR/volume/schedule.json"
+cat - > "$SCHEDULE"
 
-# Perform the search, generating results on stdout
-../search-index.pl "$@"
+# Build the index from the cached schedule
+"$TELSTARDIR/build-index.pl" --filename "$SCHEDULE" --directory "$TELSTARDIR/volume"

@@ -116,4 +116,4 @@ for my $entry (sort by_name grep $_->{label} =~ /$search_re/i, @$full_list)
 }
 
 $paginator->finish();
-print "]\n";
+print "{}\n]\n";

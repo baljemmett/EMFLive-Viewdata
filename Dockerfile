@@ -16,4 +16,4 @@ RUN apt-get -y update \
         && rm -rf ~/.cpan
 
 COPY ./lib /opt/telstar/lib/
-COPY ./guestbook ./render-guestbook ./sign-guestbook ./search ./search-index.pl ./phone-search ./search-phonebook.pl ./telstar-util /opt/telstar/
+COPY ./guestbook ./render-guestbook ./sign-guestbook ./search ./search-index.pl ./build-index.pl ./phone-search ./search-phonebook.pl ./ingest-schedule ./ingest-phonebook ./telstar-util /opt/telstar/

@@ -15,7 +15,7 @@ use Paginator;
 
 # Which year are we in, and where are the index and schedule files?
 my $year     = 2026;
-my $basedir  = "."
+my $basedir  = ".";
 my $filename = "$basedir/schedule.json";
 
 # Maximum number of results to return so the frame list doesn't get out of hand!
@@ -64,12 +64,6 @@ if (@best_docs > $max_results) {
     $#best_docs = $max_results - 1;
     $results_truncated = 1;
 }
-
-# Format the result list into a set of frames, which will be sent to stdout
-# so surround them with [ ] to form a valid JSON array.  This is ugly.
-print "[\n";
-generate_search_result_frames(903, "Search Results", map($events{$_}, @best_docs));
-print "]\n";
 
 sub add_wrapped_event_field($$$)
 {
@@ -162,8 +156,6 @@ sub generate_event_detail_frames($$$@)
 sub generate_search_result_frames($$@)
 {
 	my ($root, $heading, @events) = @_;
-
-	print "Generating $heading with " . scalar @events . " events...\n";
 
 	my @header = (
 		"[R][n][D][Y]WHAT'S ON:[W]$heading",
@@ -276,3 +268,8 @@ sub generate_search_result_frames($$@)
 	$index_paginator->finish();
 }
 
+# Format the result list into a set of frames, which will be sent to stdout
+# so surround them with [ ] to form a valid JSON array.  This is ugly.
+print "[\n";
+generate_search_result_frames(903, "Search Results", map($events{$_}, @best_docs));
+print "{}\n]\n";
