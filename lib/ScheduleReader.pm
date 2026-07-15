@@ -43,11 +43,11 @@ my %days = (
 # these will be moved to the front of the list, in this order. Otherwise the
 # default alphabetic ordering is applied.
 my @venue_order_regexes = (
-    qr/Stage [ABC]/,
+    qr/Stage [ABCD]/,
     qr/Workshop/,
     qr/Blacksmith/,
     qr/Lounge|Bar/i,
-    qr/Null Sector/,
+    qr/Null\s?Sec/,
 );
 
 # Sort criterion - by start time
