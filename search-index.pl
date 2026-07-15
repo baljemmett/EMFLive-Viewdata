@@ -181,7 +181,7 @@ sub generate_search_result_frames($$@)
 		continued => "",
 		on_new_page => sub {
 			my $frame = shift;
-			$frame->set_route(0, 902);	# Route 0 back to search page
+			$frame->set_route(0, 1);	# Route 0 back to schedules page
 			1;
 		}
 	});
@@ -199,7 +199,7 @@ sub generate_search_result_frames($$@)
         $index_paginator->{frame}->{content}->{lines}->[$result_metadata_line] = $header_line;
     };
 
-	$index->set_route(0, 902);			# Route 0 back to search page
+	$index->set_route(0, 1);			# Route 0 back to schedules page
 	$index->{"pid"}{"sequential"} = 1;
 
 	for my $event_idx (0..$#events)
