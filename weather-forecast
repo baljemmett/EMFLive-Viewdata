@@ -134,7 +134,7 @@ for my $forecast (@{$data->{features}->[0]->{properties}->{timeSeries}})
     my $time_utc = Time::Piece->strptime($forecast->{time}, "%FT%H:%MZ");
     my $forecast_day = $time_utc->fullday;
 
-    next if $time_utc->julian_day > $now->julian_day + 6;
+    next if $time_utc->julian_day >= $now->julian_day + 6;
 
     my $minute = $time_utc->min;
     my $hour = $time_utc->hour;
@@ -223,7 +223,7 @@ for my $page_title (@page_order)
         my $forecast = $pages{$page_title}->[$idx];
 
         $forecast->{feelsLikeTemp} = int($forecast->{feelsLikeTemp} + 0.5);
-        $forecast->{maxScreenAirTemp} = int($forecast->{maxScreenAirTemp} + 0.5);
+        $forecast->{maxScreenAirTemp} = defined $forecast->{maxScreenAirTemp} ? int($forecast->{maxScreenAirTemp} + 0.5) : '??';
         $forecast->{screenRelativeHumidity} = int($forecast->{screenRelativeHumidity} + 0.5);
         $forecast->{windSpeed10m} = int($forecast->{windSpeed10m} * 2.2369363 + 0.5);
 
@@ -262,7 +262,7 @@ sub table_line
 {
     my ($field, $l, $r) = @_;
 
-    sprintf("[W]%17.17s[C]%-10.10s %-10.10s", $titles{$field}, $l->{$field}, $r->{$field});
+    sprintf("[W]%17.17s[C]%-10.10s %-10.10s", $titles{$field}, $l->{$field}, $r->{$field} || "");
 }
 
 # Now generate a frame for each page
@@ -302,8 +302,8 @@ for my $page_title (@page_order)
         "",
         " Latest forecasts for Ledbury:",
         "",
-        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Day}, $r->{Day}),
-        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Time}, $r->{Time}),
+        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Day}, $r->{Day} || ""),
+        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Time}, $r->{Time} || ""),
         table_line("significantWeatherTop", $l, $r),
         table_line("significantWeatherBottom", $l, $r),
         table_line("", $l, $r),
