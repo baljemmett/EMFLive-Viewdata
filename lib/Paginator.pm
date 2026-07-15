@@ -216,6 +216,7 @@ sub finish
     $frame->{"navmessage-notfound"} = $self->{nav_error};
 
     $frame->write();
+    $frame->emit_null_frame();
 }
 
 1;
