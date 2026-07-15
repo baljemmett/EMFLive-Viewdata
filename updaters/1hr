@@ -19,6 +19,7 @@ mkdir "$NEWDIR"
 
 ../fetch-met-office-forecast
 ../weather-forecast --directory "$NEWDIR"
+[[ -f /tmp/live-weather-index.pid && -d /proc/$(< /tmp/live-weather-index.pid) ]] || ../weather-index --directory "$NEWDIR"
 
 ../telstar-util login "${TELSTAR_API_SERVER:?no Telstar server}" "${TELSTAR_API_USERNAME:?no Telstar username}" "${TELSTAR_API_PASSWORD:?no Telstar password}" 
 ../telstar-util deleteframe "${TELSTAR_API_SERVER:?no Telstar server}" 61a "${TELSTAR_API_DATABASE:?no Telstar database}" || true

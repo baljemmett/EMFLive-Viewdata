@@ -18,6 +18,11 @@ my $directory = "wxframes";
 my $year = 2026;
 my $frame_number = 6;
 
+my $pidfile = "/tmp/live-weather-index.pid";
+open PID, ">", $pidfile or die "Could not create $pidfile: $!";
+print PID $$;
+close PID;
+
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";
 
@@ -271,3 +276,4 @@ else
 
 # All done!
 $mqtt->cleanup;
+unlink $pidfile;
