@@ -6,8 +6,8 @@
         "port": 0
     },
     "content": {
-        "data": "\r\n\r\n[b][h-][g[         Welcome to]][g[   Electromagnetic]][g[  Field 2026 - Live!]][b][h-]\r\n[W][GREETING].\r\n\r\n[W]YOU ARE CONNECTED TO[B][SERVER]\r\n[W]ON [DATE] AT [TIME].\r\n",
-        "type": "markup"
+        "data": "",
+        "type": ""
     },
     "cost": 0,
     "cursor": false,
@@ -17,17 +17,17 @@
         "merge-data": null,
         "type": ""
     },
-    "frame-type": "initial",
-    "header-text": "[-]",
-    "navmessage-notfound": "[R][n][W]Page not found.[W]",
-    "navmessage-select": "[R][n][Y]Press[W]_[Y]to continue.",
+    "frame-type": "",
+    "header-text": "",
+    "navmessage-notfound": "",
+    "navmessage-select": "",
     "pid": {
         "frame-id": "a",
-        "page-no": 99
+        "page-no": 0
     },
     "redirect": {
-        "frame-id": "",
-        "page-no": 0
+        "frame-id": "a",
+        "page-no": 9
     },
     "response-data": {
         "response-action": {
@@ -44,19 +44,7 @@
         },
         "response-fields": null
     },
-    "routing-table": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-    ],
+    "routing-table": null,
     "title": {
         "data": "",
         "merge-data": null,

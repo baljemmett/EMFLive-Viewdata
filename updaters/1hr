@@ -14,11 +14,12 @@ cd "$MYDIR"
 [ -d "$NEWDIR" ] && rm -r "$NEWDIR"
 mkdir "$NEWDIR"
 
-curl -o phonebook.json 'https://phones.emfcamp.org/api/phonebook/EMF2024'
-../format-phonebook-2col --directory "$NEWDIR"
+# curl -o phonebook.json 'https://phones.emfcamp.org/api/phonebook/EMF2024'
+# ../format-phonebook-2col --directory "$NEWDIR"
 
-curl -o ledbury-3hour.json "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/all/json/352240?res=3hourly&key=${METOFFICE_API_KEY:?no Met Office API key}"
+../fetch-met-office-forecast
 ../weather-forecast --directory "$NEWDIR"
+[[ -f /tmp/live-weather-index.pid && -d /proc/$(< /tmp/live-weather-index.pid) ]] || ../weather-index --directory "$NEWDIR"
 
 ../telstar-util login "${TELSTAR_API_SERVER:?no Telstar server}" "${TELSTAR_API_USERNAME:?no Telstar username}" "${TELSTAR_API_PASSWORD:?no Telstar password}" 
 ../telstar-util deleteframe "${TELSTAR_API_SERVER:?no Telstar server}" 61a "${TELSTAR_API_DATABASE:?no Telstar database}" || true

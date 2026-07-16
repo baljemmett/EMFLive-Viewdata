@@ -81,6 +81,7 @@ services:
       - pg_service.conf
       - odbc.ini
       - password_emf-alrm
+      - password_emf-alarm
 networks:
   telstar-network:
 volumes:
@@ -94,3 +95,5 @@ secrets:
     file: secrets/odbc.ini
   password_emf-alrm:
     file: secrets/password_emf-alrm
+  password_emf-alarm:
+    file: secrets/password_emf-alarm

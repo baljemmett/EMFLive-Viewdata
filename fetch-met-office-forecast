@@ -1,0 +1,42 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+use URI;
+
+my $api_url = "https://data.hub.api.metoffice.gov.uk/sitespecific/v0/point/three-hourly";
+my $api_key = $ENV{'METOFFICE_API_KEY'} or die "No METOFFICE_API_KEY in environment.";
+
+# Eastnor Deer Park co-ordinates
+my $latitude  = 52.0411;
+my $longitude = -2.3784;
+
+# Where we stash the forecast data
+my $filename = "ledbury-3hour.json";
+
+my $uri = URI->new($api_url);
+$uri->query_form(
+    excludeParameterMetadata => 'FALSE',
+    includeLocationName => 'TRUE',
+    latitude => $latitude,
+    longitude => $longitude
+);
+
+my $ua = LWP::UserAgent->new;
+$ua->agent("$0/0.1 " . $ua->agent);
+
+my $request = HTTP::Request->new(GET => $uri);
+$request->header('Accept' => 'application/json');
+$request->header('apikey' => $api_key);
+
+my $response = $ua->request($request);
+
+if ($response->is_success) {
+    open my $file, ">", $filename or die "Could not write $filename: $!";
+    print $file $response->decoded_content;
+    close $file;
+} else {
+    die "Could not retrieve forecast: " . $response->status_line;
+}
+

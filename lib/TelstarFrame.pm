@@ -12,8 +12,10 @@ our $service = undef;
 # given a frame number and optional subpage letter.
 sub new
 {
-    my ($class, $number, $subpage) = @_;
+    my ($class, $number, $subpage, $stdout) = @_;
+       
     my $self = bless {
+        "stdout" => $stdout || 0,
         "pid" => {
             "sequential" => 0,
             "page-no" => $number,
@@ -90,19 +92,27 @@ sub write
 
     delete $output{content}{lines};
     delete $output{pid}{sequential};
+    delete $output{stdout};
 
     for my $field (qw(navmessage-select navmessage-notfound header-text routing-table))
     {
         delete $output{$field} unless defined $output{$field};
     }
 
-    $dir = $directory unless defined $dir;
-    my $pid = \%{$output{pid}};
-    $self->{filename} = $directory . "/" . $pid->{"page-no"} . $pid->{"frame-id"} . ".json";
+    if ($self->{stdout})
+    {
+        print JSON::PP->new->utf8(1)->pretty->encode(\%output), ",\n";
+    }
+    else
+    {
+        $dir = $directory unless defined $dir;
+        my $pid = \%{$output{pid}};
+        $self->{filename} = $directory . "/" . $pid->{"page-no"} . $pid->{"frame-id"} . ".json";
 
-    open my $file, ">", $self->{filename} or die "Cannot create $self->{filename}: $!";
-    print $file JSON::PP->new->pretty->encode(\%output);
-    close $file;
+        open my $file, ">", $self->{filename} or die "Cannot create $self->{filename}: $!";
+        print $file JSON::PP->new->pretty->encode(\%output);
+        close $file;
+    }
 }
 
 # Create a new TelstarFrame object representing the successor subpage to
@@ -134,7 +144,7 @@ sub next_subpage
         $pid{"frame-id"} = chr(ord($pid{"frame-id"}) + 1);
     }
 
-    my $frame = TelstarFrame->new($pid{"page-no"}, $pid{"frame-id"});
+    my $frame = TelstarFrame->new($pid{"page-no"}, $pid{"frame-id"}, $self->{"stdout"});
     $frame->{"pid"}{"sequential"} = $pid{"sequential"};
 
     return $frame;
@@ -169,6 +179,16 @@ sub set_service
 {
     my ($self, $service) = @_;
     $self->{"header-text"} = $service;
+}
+
+sub emit_null_frame
+{
+    my $self = shift;
+
+    if ($self->{"stdout"})
+    {
+        print "{}\n";
+    }
 }
 
 1;

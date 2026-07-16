@@ -23,26 +23,31 @@ our %event_types = (
 	performance => "Performance",
 	workshop => "Workshop",
 	youthworkshop => "Youth Workshop",
+    meetup => "Meetup",
+    film => "Film",
+    djset => "DJ Set",
+    familyworkshop => "Family Workshop",
+    music => "Music",
 );
 
 # These could probably be computed but whatever
 my %days = (
-	"2024-05-30" => "Thu",
-	"2024-05-31" => "Fri",
-	"2024-06-01" => "Sat",
-	"2024-06-02" => "Sun",
-	"2024-06-03" => "Mon",
+	"2026-07-16" => "Thu",
+	"2026-07-17" => "Fri",
+	"2026-07-18" => "Sat",
+	"2026-07-19" => "Sun",
+	"2026-07-20" => "Mon",
 );
 
 # Set of regexes used to reorder venues in the canonical list. Venues matching
 # these will be moved to the front of the list, in this order. Otherwise the
 # default alphabetic ordering is applied.
 my @venue_order_regexes = (
-    qr/Stage [ABC]/,
+    qr/Stage [ABCD]/,
     qr/Workshop/,
     qr/Blacksmith/,
     qr/Lounge|Bar/i,
-    qr/Null Sector/,
+    qr/Null\s?Sec/,
 );
 
 # Sort criterion - by start time
@@ -144,7 +149,7 @@ sub from_file($)
             desc     => unicode_field($_->{"description"}),
             venue    => unicode_field($_->{"venue"}),
             type     => $event_types{$_->{"type"}},
-            by       => unicode_field($_->{"speaker"}),
+            by       => unicode_field($_->{"names"}),
             cost     => $_->{"cost"} || "",
             ages     => unicode_field($_->{"age_range"} || ""),
             cws      => unicode_field($_->{"content_note"} || ""),
@@ -155,9 +160,9 @@ sub from_file($)
             edate    => $_->{"end_date"},
             stime    => Time::Piece->strptime($_->{"start_date"}, "%Y-%m-%d %H:%M:%S") - 3600,
             etime    => Time::Piece->strptime($_->{"end_date"}, "%Y-%m-%d %H:%M:%S") - 3600,
-            friendly => $_->{"is_family_friendly"} || 0,
+            friendly => $_->{"family_friendly"} || 0,
             recorded => ($_->{"video_privacy"} || "") eq "public",
-            ticketed => $_->{"requires_ticket"} || 0,
+            ticketed => ($_->{"drop_in"} || "") eq "false",
             reminder => derive_reminder_code($_),
         };
 

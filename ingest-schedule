@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -ef
+
+# Helper script to ingest the schedule from stdin and index it
+
+# Which Telstar database are we running in?
+# Lowercase the environment variable to use as a parameter for telstar-util
+DATABASE=${TELSTAR_DBCOLLECTION,,?}
+
+# Where are we?
+TELSTARDIR=$(dirname $(realpath $0))
+
+# Set up the Perl environment
+PERL5LIB=$TELSTARDIR/lib${PERL5LIB:+:$PERL5LIB}
+export PERL5LIB
+
+# Copy the schedule from stdin to our persistent cache
+SCHEDULE="$TELSTARDIR/volume/schedule.json"
+cat - > "$SCHEDULE"
+
+# Build the index from the cached schedule
+"$TELSTARDIR/build-index.pl" --filename "$SCHEDULE" --directory "$TELSTARDIR/volume"

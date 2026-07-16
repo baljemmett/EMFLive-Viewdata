@@ -6,7 +6,14 @@ RUN apt-get -y update \
         libmail-sendeasy-perl \
         libtext-wrapper-perl \
         libtext-unidecode-perl \
-        && rm -rf /var/lib/apt/lists/*
+        libberkeleydb-perl \
+        liblist-moreutils-xs-perl \
+        liblist-moreutils-perl \
+        libmodule-build-perl \
+        make \
+        && rm -rf /var/lib/apt/lists/* \
+        && cpan -T install Search::Indexer \
+        && rm -rf ~/.cpan
 
 COPY ./lib /opt/telstar/lib/
-COPY ./guestbook ./render-guestbook ./sign-guestbook ./telstar-util /opt/telstar/
+COPY ./guestbook ./render-guestbook ./sign-guestbook ./search ./search-index.pl ./build-index.pl ./phone-search ./search-phonebook.pl ./ingest-schedule ./ingest-phonebook ./telstar-util /opt/telstar/

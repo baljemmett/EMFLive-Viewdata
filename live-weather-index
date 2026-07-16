@@ -9,13 +9,19 @@ use File::stat;
 use JSON::PP;
 use TelstarClient;
 use TelstarFrame;
+use Text::Wrapper;
 use Data::Dumper;
 use POSIX qw(strftime fmod);
 
 my $daylist = "weather-days.json";
 my $directory = "wxframes";
-my $year = 2024;
+my $year = 2026;
 my $frame_number = 6;
+
+my $pidfile = "/tmp/live-weather-index.pid";
+open PID, ">", $pidfile or die "Could not create $pidfile: $!";
+print PID $$;
+close PID;
 
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";
@@ -28,7 +34,7 @@ our $days_last_mtime = 0;
 our $json = JSON::PP->new->utf8;
 
 my $broker = "mqtt.emf.camp";
-my $topic = "emf/weather";
+my $topic = "weather/hq";
 
 my $telstar = new TelstarClient;
 
@@ -139,6 +145,8 @@ sub build_page
 
     my @day_links = map day_text($_), sort keys %$days;
 
+    $#day_links = 5 unless $#day_links < 5;
+    
     $frame->add_lines(@header);
     $frame->add_line(join(" ", @day_links[0..2]));
     $frame->add_line(join(" ", @day_links[3..$#day_links]));
@@ -146,16 +154,35 @@ sub build_page
 
     if (keys %$obs)
     {
-        my $now = strftime("%a %H:%M:%S", localtime);
+        my $now      = strftime("%a %H:%M:%S", localtime);
+        my $humidity = sprintf("\x1EHumidity:   \x1D%d%% RH ", $obs->{humidity});
+
+        my $wrapper  = Text::Wrapper->new(columns => 39,
+                                          par_start => $humidity,
+                                          body_start => "\x1D" . " "x13,
+                                          wrap_after => "\x1D\x1E/-");
+
+        my @flex = split /\n/, $wrapper->wrap("(" . $obs->{humidex_perception} . ")");
+
+        if (@flex > 2)
+        {
+            $#flex = 1;
+            1 while (len($flex[1]) > 35 && $flex[1] =~ s/\s+\S*$//);
+            $flex[1] .= "...)";
+        }
+
+        map s/\x1D/[C]/g, @flex;
+        map s/\x1E/[Y]/g, @flex;
+
+        push @flex, sprintf("[Y]Indoors:    [C]%d deg C, %d%% RH", $obs->{tempin}, $obs->{humidityin});
+        push @flex, "" if @flex < 3;
 
         my @observations = (
             " Latest observations from the on-site",
             " weather station, as of[C]$now:",
             "",
             sprintf("[Y]Temperature:[C]%d deg C (feels like %d)", $obs->{temp}, $obs->{feelslike}),
-            sprintf("[Y]Humidity:   [C]%d%% RH (%-0.16s)", $obs->{humidity}, $obs->{humidex_perception}),
-            sprintf("[Y]Indoors:    [C]%d deg C, %d%% RH", $obs->{tempin}, $obs->{humidityin}),
-            "",
+            @flex,
             sprintf("[Y]Wind Speed: [C]%d mph (%s)", $obs->{windspeed}, cardinal($obs->{winddir})),
             sprintf("[Y]Rainfall:   [C]%d mm (hour), %d mm (day)", $obs->{hrain_piezo}, $obs->{drain_piezo}),
             "",
@@ -249,3 +276,4 @@ else
 
 # All done!
 $mqtt->cleanup;
+unlink $pidfile;

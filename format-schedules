@@ -15,7 +15,7 @@ use Paginator;
 ###
 
 # Which year are we in, and where's the schedule file?
-my $year     = 2024;
+my $year     = 2026;
 my $filename = "$year.json";
 
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
@@ -75,8 +75,12 @@ sub generate_event_detail_frames($$$@)
 
 	$on_new_page->($frame);
 
+	die "Event $event->{id} has no type" unless defined $event->{type};
+	die "Event $event->{id} has no speaker" unless defined $event->{by};
+
+	my $event_by      = $event->{by} eq "" ? "" : " by " . $event->{by};
 	my @wrapped_title = split /\n/, $event_wrapper->wrap($event->{title});
-	my @wrapped_by    = split /\n/, $event_wrapper->wrap("$event->{type} by " . $event->{by});
+	my @wrapped_by    = split /\n/, $event_wrapper->wrap($event->{type} . $event_by);
 
 	my $wrapped_first = shift @wrapped_by;
 	$wrapped_first =~ s/ by / by[C]/;
@@ -167,9 +171,10 @@ sub generate_schedule_tree($$@)
 		my $entry_frame = $first_entry_frame + $event->{id};
 
 		# Build the index entry for this event
+		my $event_by      = $event->{by} eq "" ? "" : " by " . $event->{by};
 		my $schedule_line = sprintf("[C]%s - %s  %-18.18s", $event->{start}, $event->{end}, $event->{venue});
 		my @wrapped_title = split /\n/, $index_wrapper->wrap($event->{title});
-		my @wrapped_by    = split /\n/, $index_wrapper->wrap("$event->{type} by " . $event->{by});
+		my @wrapped_by    = split /\n/, $index_wrapper->wrap($event->{type} . $event_by);
 
 		my $wrapped_first = shift @wrapped_by;
 		$wrapped_first =~ s/ by / by[C]/;
@@ -347,9 +352,9 @@ generate_schedule_tree(103, "Sunday Schedule", grep($_->{day} eq "Sun", @events)
 generate_schedule_tree(104, "Stage A Schedule", grep($_->{venue} eq "Stage A", @events));
 generate_schedule_tree(105, "Stage B Schedule", grep($_->{venue} eq "Stage B", @events));
 generate_schedule_tree(106, "Stage C Schedule", grep($_->{venue} eq "Stage C", @events));
-generate_schedule_tree(107, "Workshop Schedules", grep($_->{venue} =~ "Workshop", @events));
-generate_schedule_tree(108, "Null Sector Schedule", grep($_->{venue} =~ "Null Sector", @events));
-generate_schedule_tree(109, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Null Sector", @events));
+generate_schedule_tree(107, "Stage D and Null Sector", grep($_->{venue} =~ "Stage D|NullSector", @events));
+generate_schedule_tree(108, "Workshop Schedules", grep($_->{venue} =~ "Workshop|Nationwide", @events));
+generate_schedule_tree(109, "Other Venue Schedules", grep($_->{venue} !~ "Stage|Workshop|Nationwide|Null Sector", @events));
 
 # Get the canonical venue ordering so that we can work out the correct parent
 # page when generating now/next detail pages.
@@ -358,8 +363,8 @@ my @all_venues = ScheduleReader::all_venues(@events);
 generate_nownext_pages(\@events, 21, "Stage A", grep($_ eq "Stage A", @all_venues));
 generate_nownext_pages(\@events, 22, "Stage B", grep($_ eq "Stage B", @all_venues));
 generate_nownext_pages(\@events, 23, "Stage C", grep($_ eq "Stage C", @all_venues));
-generate_nownext_pages(\@events, 24, "Workshops", grep($_ =~ "Workshop", @all_venues));
-generate_nownext_pages(\@events, 25, "Null Sector", grep($_ =~ "Sector", @all_venues));
-generate_nownext_pages(\@events, 26, "Other Venues", grep($_ !~ "Stage|Workshop|Sector", @all_venues));
+generate_nownext_pages(\@events, 24, "Stage D and Null Sector", grep($_ =~ "Stage D|Sector", @all_venues));
+generate_nownext_pages(\@events, 25, "Workshops", grep($_ =~ "Workshop|Nationwide", @all_venues));
+generate_nownext_pages(\@events, 26, "Other Venues", grep($_ !~ "Stage|Workshop|Nationwide|Sector", @all_venues));
 generate_nownext_pages(\@events, 27, "All Stages", grep($_ =~ "Stage", @all_venues));
 generate_nownext_pages(\@events, 29, "All Venues", @all_venues);

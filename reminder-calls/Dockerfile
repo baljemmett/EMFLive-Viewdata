@@ -1,8 +1,8 @@
 FROM verity.microwavepizza.co.uk/asterisk-backports:latest
 
-RUN ln -s /run/secrets/pgpass ~/.pgpass && \
-    ln -s /run/secrets/pg_service.conf ~/.pg_service.conf && \
+RUN ln -s /run/secrets/pg_service.conf ~/.pg_service.conf && \
     ln -s /run/secrets/password_emf-alrm /etc/asterisk && \
+    ln -s /run/secrets/password_emf-alarm /etc/asterisk && \
     ln -fs /run/secrets/odbc.ini /etc/odbc.ini
 
 RUN apt-get -y update \

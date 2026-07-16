@@ -17,7 +17,7 @@ use Text::Wrapper;
 ###
 
 # Which year are we in, and where's the schedule file?
-my $year      = 2024;
+my $year      = 2026;
 my $filename  = "$year.json";
 my $directory = "newframes";
 
@@ -178,8 +178,9 @@ sub generate_list
             # Build the index entry for this event
 #           my $schedule_line = "[C]$event->{start} - $event->{end}   $event->{venue}";
             my $schedule_line = "[C]$event->{start} - $event->{end}";
+            my $event_by      = $event->{by} eq "" ? "" : " by " . $event->{by};
             my @wrapped_title = split /\n/, $wrapper->wrap($event->{title});
-            my @wrapped_by    = split /\n/, $wrapper->wrap("$event->{type} by " . $event->{by});
+            my @wrapped_by    = split /\n/, $wrapper->wrap($event->{type} . $event_by);
 
             my $wrapped_first = shift @wrapped_by;
             $wrapped_first =~ s/ by / by[C]/;
@@ -219,8 +220,8 @@ sub generate_list
 generate_list(\%venues, 21, 21, "Stage A");
 generate_list(\%venues, 22, 22, "Stage B");
 generate_list(\%venues, 23, 23, "Stage C");
-generate_list(\%venues, 24, 24, grep /Workshop/, @all_venues);
-generate_list(\%venues, 25, 25, grep /Sector/, @all_venues);
-generate_list(\%venues, 26, 26, grep !/Stage|Workshop|Sector/, @all_venues);
+generate_list(\%venues, 24, 24, grep /Stage D|Sector/, @all_venues);
+generate_list(\%venues, 25, 25, grep /Workshop|Nationwide/, @all_venues);
+generate_list(\%venues, 26, 26, grep !/Stage|Workshop|Nationwide|Sector/, @all_venues);
 generate_list(\%venues, 27, 27, grep /Stage/, @all_venues);
 generate_list(\%venues, 29, 29, @all_venues);

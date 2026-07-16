@@ -9,10 +9,10 @@ use Text::Wrapper;
 use TelstarFrame;
 use Paginator;
 use Getopt::Long;
+use Data::Dumper;
 
 my $directory = "newframes";
-my $year = 2024;
-my $frame_number = 51;
+my $year = 2026;
 
 GetOptions("year=s" => \$year,
            "directory=s" => \$directory) or die "Error in command line arguments.";
@@ -37,12 +37,6 @@ else
 $TelstarFrame::directory = $directory;
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
 
-my @header = (
-    "[R][n][D][Y]PHONE BOOK:[W]Not Available in Yellow",
-    "",
-    "",
-);
-
 my $on_new_page = sub {
     my $frame = shift;
     $frame->set_route(0, 5);	# Route 0 back to phones index
@@ -50,64 +44,107 @@ my $on_new_page = sub {
     1;
 };
 
-my $frame = new TelstarFrame($frame_number);
-my $paginator = new Paginator($frame,
+sub by_name
 {
-    header => \@header,
-    continues => "",
-    continued => "",
-    on_new_page => $on_new_page,
-});
+    uc($a->{name}) cmp uc($b->{name});
+}
 
-$on_new_page->($frame);
+sub massage
+{
+    my $entry = shift;
+    my $name = $entry->{name};
+
+    $entry->{type} ||= "PERSON";
+    $entry->{name} =~ s/(?[ \p{Emoji} - [\001 - \377] ])|\x{200d}//g;
+    $entry->{name} =~ s/^\s+|\s+$//g;
+
+#    print Dumper($name, $entry) if $name =~ /(?[ \p{Emoji} - [\001 - \377] ])|\x{200d}/;
+    
+    $entry;
+}
+
+my @entries = sort by_name map(massage($_), @$full_list);
 
 # We're going to use the ASCII separator-characters trick to encode attribute
 # changes, since an attribute change takes up a character cell but the markup
 # for them takes up three which'll screw up line length calculations...
 my $wrapper = Text::Wrapper->new(columns => 39,
-                                 par_start => "\x1D",
-                                 body_start => " "x6,
-                                 wrap_after => "\x1D\x1E/-");
+                                    par_start => "\x1D",
+                                    body_start => " "x8,
+                                    wrap_after => "\x1D\x1E/-");
 
-# Now trundle through the list, alphabetically
-my $current_letter = undef;
-
-sub by_name
+sub generate_section($$$@)
 {
-    uc($a->{label}) cmp uc($b->{label});
-}
+    my $frame_number = shift;
+    my $section_title = shift;
+    my $type_filter = shift;
+    my @entries = @_;
 
-for my $entry (sort by_name @$full_list)
-{
-    my $entry_text = $entry->{value} . "\x1E" . unidecode($entry->{label});
-    my @lines = split /\n/, $wrapper->wrap($entry_text);
+    my @header = (
+        "[R][n][D][Y]PHONE BOOK:[W]$section_title",
+        "",
+        "",
+    );
 
-    map s/\x1D/[Y]/g, @lines;
-    map s/\x1E/[W]/g, @lines;
-
-    # Insert headings before each change of letter
-    my $letter = uc(substr($entry->{label}, 0, 1));
-    
-    if (! defined $current_letter || $current_letter ne $letter)
+    my $frame = new TelstarFrame($frame_number);
+    my $paginator = new Paginator($frame,
     {
-        my @heading = ("", "     [W]..:[Y]${letter}[W]:..", "");
-        unshift @lines, @heading;
+        header => \@header,
+        continues => "",
+        continued => "",
+        on_new_page => $on_new_page,
+    });
 
-        # Remove the leading blank line for the first section heading only
-        shift @lines if ! defined $current_letter;
+    $on_new_page->($frame);
 
-        $current_letter = $letter;
+    # Now trundle through the list, alphabetically
+    my $current_letter = undef;
+
+    for my $entry (@entries)
+    {
+        next if defined $type_filter && $entry->{type} ne $type_filter;
+
+        my $mnemonic = $entry->{mnemonic} ? " ($entry->{mnemonic})" : "";
+        my $entry_text = sprintf("%6s", $entry->{number}) . $mnemonic . "\x1E" . unidecode($entry->{name});
+        my @lines = split /\n/, $wrapper->wrap($entry_text);
+
+        map s/\x1D/[Y]/g, @lines;
+        map s/\x1E/[W]/g, @lines;
+
+        # Insert headings before each change of letter
+        my $letter = uc(substr($entry->{name}, 0, 1));
+        
+        if (! defined $current_letter || $current_letter ne $letter)
+        {
+            my @heading = ("", "     [W]..:[Y]${letter}[W]:..", "");
+            unshift @lines, @heading;
+
+            # Remove the leading blank line for the first section heading only
+            shift @lines if ! defined $current_letter;
+
+            $current_letter = $letter;
+        }
+
+        # Make sure we can fit the entire entry, plus section heading if one is
+        # is required; if not spill whole lot to new page.
+        if (! $paginator->has_room_for(@lines))
+        {
+            $paginator->new_page();
+            shift @lines if $lines[0] eq "";
+        }
+
+        $paginator->add_text_block(@lines);
     }
 
-    # Make sure we can fit the entire entry, plus section heading if one is
-    # is required; if not spill whole lot to new page.
-    if (! $paginator->has_room_for(@lines))
-    {
-        $paginator->new_page();
-        shift @lines if $lines[0] eq "";
-    }
-
-    $paginator->add_text_block(@lines);
+    $paginator->finish();
 }
 
-$paginator->finish();
+generate_section(51, "Not Available in Yellow", undef, @entries);
+generate_section(52, "Important Numbers", "IMPORTANT", @entries);
+generate_section(53, "Orga Numbers", "ORGA", @entries);
+generate_section(54, "Services", "SERVICE", @entries);
+generate_section(55, "Villages", "VILLAGE", @entries);
+generate_section(56, "People", "PERSON", @entries);
+generate_section(57, "Public Telephones", "PUBLIC", @entries);
+generate_section(58, "Fax Lines", "FAX", @entries);
+generate_section(59, "Modem Lines", "MODEM", @entries);
