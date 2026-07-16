@@ -5,6 +5,7 @@ extensions = {
     emf_inbound = {
         ["remindercalls"] = reminder_extension;
         [2576] = reminder_extension;
+        [25276] = reminder_extension;
     };
 
     emf_outbound = {

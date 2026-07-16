@@ -6,7 +6,7 @@ use DBI;
 
 # Define name and number used for outgoing caller ID
 my $service_name = "EMF ReminderCall";
-my $service_number = 2576;
+my $service_number = 25276;
 
 # Define Asterisk context and extension number to be used for outgoing calls
 # This should be bound to the `reminder_callback` function from `service.lua`
@@ -31,7 +31,7 @@ sub despatch_via_asterisk($$)
     my $user_number = shift;
 
     my %fields = (
-        Channel => "PJSIP/$user_number\@emf-alrm",
+        Channel => "PJSIP/$user_number\@emf-alarm",
         Callerid => "\"$service_name\" <$service_number>",
         Context => $callback_context,
         Extension => $callback_extension,
