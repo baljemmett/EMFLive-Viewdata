@@ -8,6 +8,7 @@ extensions = {
         [2576] = reminder_extension;
         [25276] = reminder_extension;
         [49372] = hydration_extension;
+        [49378] = hydration_extension;
     };
 
     emf_outbound = {

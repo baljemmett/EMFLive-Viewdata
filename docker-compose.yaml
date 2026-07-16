@@ -83,6 +83,7 @@ services:
       - password_emf-alrm
       - password_emf-alarm
       - password_emf-hydra
+      - password_emf-hydr8
 networks:
   telstar-network:
 volumes:
@@ -100,3 +101,5 @@ secrets:
     file: secrets/password_emf-alarm
   password_emf-hydra:
     file: secrets/password_emf-hydra
+  password_emf-hydr8:
+    file: secrets/password_emf-hydr8

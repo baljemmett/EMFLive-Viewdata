@@ -7,7 +7,7 @@ use v5.10;
 
 # Define name and number used for outgoing caller ID
 my $service_name = "Hydration Reminder";
-my $service_number = 49372;
+my $service_number = 49378;
 
 # Define Asterisk context and extension number to be used for outgoing calls
 # This should be bound to the `reminder_callback` function from `service.lua`
@@ -52,7 +52,7 @@ sub despatch_via_asterisk($$)
     my $user_number = shift;
 
     my %fields = (
-        Channel => "PJSIP/$user_number\@emf-hydra",
+        Channel => "PJSIP/$user_number\@emf-hydr8",
         Callerid => "\"$service_name\" <$service_number>",
         Context => $callback_context,
         Extension => $callback_extension,
