@@ -315,9 +315,9 @@ for my $page_title (@page_order)
         table_line("screenRelativeHumidity", $l, $r),
         table_line("uvText", $l, $r),
         "",
-        " (Last updated $updated; contains",
-        " public sector information licensed",
-        " under the Open Government Licence.)",
+        "",
+        " (Last updated $updated; powered",
+        " by Met Office data.)",
     );
 
     $frame->set_route(0, 6);    # 0 back to index
