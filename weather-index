@@ -3,13 +3,18 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
 use JSON::PP;
 use TelstarFrame;
+use POSIX;
 
 my $daylist = "weather-days.json";
 my $directory = "wxframes";
-my $year = 2024;
+my $year = 2026;
 my $frame_number = 6;
+
+GetOptions("year=s" => \$year,
+           "directory=s" => \$directory) or die "Error in command line arguments.";
 
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";
@@ -61,9 +66,23 @@ sub day_text
 
 my @day_links = map day_text($_), sort keys %$days;
 
+$#day_links = 5 unless $#day_links < 5;
+
 $frame->add_lines(@header);
 $frame->add_line(join(" ", @day_links[0..2]));
 $frame->add_line(join(" ", @day_links[3..$#day_links]));
+
+my $now = strftime("%a %H:%M:%S", localtime);
+
+my @observations = (
+    "",
+    " Latest observations from the on-site",
+    " weather station are unavailable, as of",
+    "[C]$now\[W]- please check back again",
+    " later for live updates.",
+);
+
+$frame->add_lines(@observations);
 
 $frame->{"navmessage-select"} = "[R][n][Y]Select day, or[W]_[Y]for main index.";
 $frame->{"navmessage-notfound"} = "[R][n][Y]Not found! Press[W]_[Y]for main index.";

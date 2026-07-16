@@ -6,13 +6,14 @@ use warnings;
 use Getopt::Long;
 use JSON::PP;
 use TelstarFrame;
-use POSIX qw(strftime);
+use POSIX qw(strftime fmod);
 use Time::Piece;
+use Data::Dumper;
 
 my $filename = "ledbury-3hour.json";
 my $daylist = "weather-days.json";
 my $directory = "wxframes";
-my $year = 2024;
+my $year = 2026;
 
 GetOptions("filename=s" => \$filename,
            "year=s" => \$year,
@@ -26,6 +27,37 @@ my $first_frame_number = 61;
 
 $TelstarFrame::directory = $directory;
 $TelstarFrame::service = "[R][n][C] EMF ${year}[W]Live   [-]";
+
+# Convert a direction in degrees to the nearest compass reading
+my %directions = (
+      0   => "N",
+     22.5 => "NNE",
+     45   => "NE",
+     67.5 => "ENE",
+     90   => "E",
+    112.5 => "ESE",
+    135   => "SE",
+    157.5 => "SSE",
+    180   => "S",
+    202.5 => "SSW",
+    225   => "SW",
+    247.5 => "WSW",
+    270   => "W",
+    292.5 => "WNW",
+    315   => "NW",
+    337.5 => "NNW",
+);
+
+sub cardinal
+{
+    my $dir = shift;
+
+    # Round to nearest 22.5-degree interval
+    my $closest_dir = 22.5 * int(($dir + 22.4)/22.5);
+    $closest_dir = fmod($closest_dir, 360);
+
+    return $directions{$closest_dir} || "???";
+}
 
 # Start by reading the forecast from the JSON file...
 my $data;
@@ -42,27 +74,27 @@ else
 }
 
 # Make sure it's what we expect it to be
-die "Unexpected data type $data->{SiteRep}->{DV}->{type}" unless
-    $data->{SiteRep}->{DV}->{type} eq "Forecast";
+die "Unexpected data type $data->{type}" unless
+    $data->{type} eq "FeatureCollection";
 
-die "Unexpected location $data->{SiteRep}->{DV}->{Location}->{name}" unless
-    $data->{SiteRep}->{DV}->{Location}->{name} eq "LEDBURY";
+die "Unexpected location $data->{features}->[0]->{properties}->{location}->{name}" unless
+    $data->{features}->[0]->{properties}->{location}->{name} eq "Ledbury";
 
 my %param_units = ();
-for my $params (@{$data->{SiteRep}->{Wx}->{Param}})
+while (my ($name, $param) = each %{$data->{parameters}->[0]})
 {
-    $param_units{$params->{name}} = $params->{units};
+    $param_units{$name} = $param->{unit}->{symbol}->{type};
 }
 
 my %expected_units = (
-    F => "C",
-    H => "%",
-    T => "C",
-    D => "compass",
-    S => "mph",
-    U => "",
-    W => "",
-    Pp => "%",
+    feelsLikeTemp => "Cel",
+    screenRelativeHumidity => "%",
+    maxScreenAirTemp => "Cel",
+    windDirectionFrom10m => "deg",
+    windSpeed10m => "m/s", # TODO
+    uvIndex => "1",
+    significantWeatherCode => "1",
+    probOfPrecipitation => "%",
 );
 
 for (keys %expected_units)
@@ -72,8 +104,8 @@ for (keys %expected_units)
 }
 
 # Pull out the time the forecast was made
-my $updated_str = $data->{SiteRep}->{DV}->{dataDate};
-my $updated_utc = Time::Piece->strptime($updated_str, "%FT%TZ");
+my $updated_str = $data->{features}->[0]->{properties}->{modelRunDate};
+my $updated_utc = Time::Piece->strptime($updated_str, "%FT%H:%MZ");
 my $updated_local = localtime($updated_utc->epoch);
 my $updated = $updated_local->strftime("%a %H:%M");
 
@@ -95,31 +127,31 @@ my %day_frames = ();
 my %page_frames = ();
 my $frame_number = $first_frame_number;
 
-for my $period (@{$data->{SiteRep}->{DV}->{Location}->{Period}})
+my $now = localtime;
+
+for my $forecast (@{$data->{features}->[0]->{properties}->{timeSeries}})
 {
-    die "Unexpected period type $period->{type}" if $period->{type} ne "Day";
-    my $day_start_utc = Time::Piece->strptime($period->{value}, "%FZ");
-    my $forecast_day = $day_start_utc->fullday;
+    my $time_utc = Time::Piece->strptime($forecast->{time}, "%FT%H:%MZ");
+    my $forecast_day = $time_utc->fullday;
 
-    for my $forecast (@{$period->{Rep}})
-    {
-        my $minute = $forecast->{'$'};
-        my $hour = int($minute / 60);
-        my $local = localtime($day_start_utc->epoch + 60 * $minute);
-        my $logical = localtime($local->epoch - $logical_day_start * 60 * 60);
-        my $logical_day = $logical->fullday;
+    next if $time_utc->julian_day >= $now->julian_day + 6;
 
-        $forecast->{Day} = $local->wdayname;
-        $forecast->{Time} = $local->strftime("%H:%M");   
+    my $minute = $time_utc->min;
+    my $hour = $time_utc->hour;
+    my $local = localtime($time_utc->epoch);
+    my $logical = localtime($local->epoch - $logical_day_start * 60 * 60);
+    my $logical_day = $logical->fullday;
 
-        my $forecast_page = $logical_day . " " . hour_to_period($hour);
+    $forecast->{Day} = $local->wdayname;
+    $forecast->{Time} = $local->strftime("%H:%M");   
 
-        push @page_order, $forecast_page unless exists $pages{$forecast_page};
-        push @{$pages{$forecast_page}}, $forecast;
+    my $forecast_page = $logical_day . " " . hour_to_period($hour);
 
-        $day_frames{$logical_day} = $frame_number++ unless exists $day_frames{$logical_day};
-        $page_frames{$forecast_page} = $day_frames{$logical_day};
-    }
+    push @page_order, $forecast_page unless exists $pages{$forecast_page};
+    push @{$pages{$forecast_page}}, $forecast;
+
+    $day_frames{$logical_day} = $frame_number++ unless exists $day_frames{$logical_day};
+    $page_frames{$forecast_page} = $day_frames{$logical_day};
 }
 
 # Apply units and suchlike to each forecast, on a page-by-page basis
@@ -189,16 +221,23 @@ for my $page_title (@page_order)
     for my $idx (0..$max)
     {
         my $forecast = $pages{$page_title}->[$idx];
-        $forecast->{F} .= " deg C";
-        $forecast->{T} .= " deg C";
-        $forecast->{H} .= "% RH";
-        $forecast->{S} .= " mph";
-        $forecast->{Pp} .= "%";
 
-        $forecast->{Wt} = $types_top{$forecast->{W}} || ($forecast->{W} . '[Y]?[C]');
-        $forecast->{Wb} = $types_bottom{$forecast->{W}} || "";
+        $forecast->{feelsLikeTemp} = int($forecast->{feelsLikeTemp} + 0.5);
+        $forecast->{maxScreenAirTemp} = defined $forecast->{maxScreenAirTemp} ? int($forecast->{maxScreenAirTemp} + 0.5) : '??';
+        $forecast->{screenRelativeHumidity} = int($forecast->{screenRelativeHumidity} + 0.5);
+        $forecast->{windSpeed10m} = int($forecast->{windSpeed10m} * 2.2369363 + 0.5);
 
-        $forecast->{Uv} = $uv{$forecast->{U}} || ($forecast->{U} . '[Y]?[C]');
+        $forecast->{feelsLikeTemp} .= " deg C";
+        $forecast->{maxScreenAirTemp} .= " deg C";
+        $forecast->{screenRelativeHumidity} .= "% RH";
+        $forecast->{windSpeed10m} .= " mph";    # TODO
+        $forecast->{probOfPrecipitation} .= "%";
+        $forecast->{windDirectionFrom10m} = cardinal($forecast->{windDirectionFrom10m});
+
+        $forecast->{significantWeatherTop} = $types_top{$forecast->{significantWeatherCode}} || ($forecast->{significantWeatherCode} . '[Y]?[C]');
+        $forecast->{significantWeatherBottom} = $types_bottom{$forecast->{significantWeatherCode}} || "";
+
+        $forecast->{uvText} = $uv{$forecast->{uvIndex}} || ($forecast->{uvIndex} . '[Y]?[C]');
         $forecast->{""} = "";
     }
 
@@ -207,15 +246,15 @@ for my $page_title (@page_order)
 }
 
 my %titles = (
-    F => "Feels Like:",
-    T => "Temperature:",
-    H => "Humidity:",
-    S => "Wind Speed:",
-    D => "Wind Direction:",
-    Uv => "UV Index:",
-    Pp => "Precip. Prob'ity:",
-    Wt => "Weather Type:",
-    Wb => "",
+    feelsLikeTemp => "Feels Like:",
+    maxScreenAirTemp => "Temperature:",
+    screenRelativeHumidity => "Humidity:",
+    windSpeed10m => "Wind Speed:",
+    windDirectionFrom10m => "Wind Direction:",  # TODO
+    uvText => "UV Index:",
+    probOfPrecipitation => "Precip. Prob'ity:",
+    significantWeatherTop => "Weather Type:",
+    significantWeatherBottom => "",
     "" => "",
 );
 
@@ -223,7 +262,7 @@ sub table_line
 {
     my ($field, $l, $r) = @_;
 
-    sprintf("[W]%17.17s[C]%-10.10s %-10.10s", $titles{$field}, $l->{$field}, $r->{$field});
+    sprintf("[W]%17.17s[C]%-10.10s %-10.10s", $titles{$field}, $l->{$field}, $r->{$field} || "");
 }
 
 # Now generate a frame for each page
@@ -263,22 +302,22 @@ for my $page_title (@page_order)
         "",
         " Latest forecasts for Ledbury:",
         "",
-        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Day}, $r->{Day}),
-        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Time}, $r->{Time}),
-        table_line("Wt", $l, $r),
-        table_line("Wb", $l, $r),
+        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Day}, $r->{Day} || ""),
+        sprintf("[Y]%17s %-10.10s %-10.10s", "", $l->{Time}, $r->{Time} || ""),
+        table_line("significantWeatherTop", $l, $r),
+        table_line("significantWeatherBottom", $l, $r),
         table_line("", $l, $r),
-        table_line("Pp", $l, $r),
-        table_line("T", $l, $r),
-        table_line("F", $l, $r),
-        table_line("S", $l, $r),
-        table_line("D", $l, $r),
-        table_line("H", $l, $r),
-        table_line("Uv", $l, $r),
+        table_line("probOfPrecipitation", $l, $r),
+        table_line("maxScreenAirTemp", $l, $r),
+        table_line("feelsLikeTemp", $l, $r),
+        table_line("windSpeed10m", $l, $r),
+        table_line("windDirectionFrom10m", $l, $r),
+        table_line("screenRelativeHumidity", $l, $r),
+        table_line("uvText", $l, $r),
         "",
-        " (Last updated $updated; contains",
-        " public sector information licensed",
-        " under the Open Government Licence.)",
+        "",
+        " (Last updated $updated; powered",
+        " by Met Office data.)",
     );
 
     $frame->set_route(0, 6);    # 0 back to index

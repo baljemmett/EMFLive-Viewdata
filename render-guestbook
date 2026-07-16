@@ -9,7 +9,7 @@ use Paginator;
 
 my $filename = "guestbook-entries.json";
 my $directory = "guestbook-frames";
-my $year = 2024;
+my $year = 2026;
 
 # Ensure output directory exists
 -d $directory || mkdir $directory || die "Could not create $directory/: $!";

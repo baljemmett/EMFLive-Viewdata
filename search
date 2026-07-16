@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -ef
+
+# Helper script to interface between Telstar and the search scripts
+
+# Which Telstar database are we running in?
+# Lowercase the environment variable to use as a parameter for telstar-util
+DATABASE=${TELSTAR_DBCOLLECTION,,?}
+
+# Where are we?
+TELSTARDIR=$(dirname $(realpath $0))
+
+# Set up the Perl environment
+PERL5LIB=$TELSTARDIR/lib${PERL5LIB:+:$PERL5LIB}
+export PERL5LIB
+
+# The search index lives in our persistent storage
+cd "$TELSTARDIR/volume"
+
+# Perform the search, generating results on stdout
+../search-index.pl "$@"
