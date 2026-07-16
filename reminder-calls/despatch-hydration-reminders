@@ -41,7 +41,7 @@ my $dummy_mode = {
 
 sub reschedule()
 {
-    state $reschedule = $db->prepare("UPDATE hydration_subscriptions SET next_reminder = NOW() + INTERVAL '15' SECOND WHERE hydration_id = ?");
+    state $reschedule = $db->prepare("UPDATE hydration_subscriptions SET next_reminder = NOW() + INTERVAL '30' MINUTE WHERE hydration_id = ?");
     $reschedule;
 }
 
