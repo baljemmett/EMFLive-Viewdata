@@ -1,0 +1,54 @@
+{
+    "author-id": "",
+    "connection": {
+        "address": "",
+        "mode": "",
+        "port": 0
+    },
+    "content": {
+        "data": "",
+        "type": ""
+    },
+    "cost": 0,
+    "cursor": false,
+    "disable-clear": false,
+    "footer": {
+        "data": "",
+        "merge-data": null,
+        "type": ""
+    },
+    "frame-type": "",
+    "header-text": "",
+    "navmessage-notfound": "",
+    "navmessage-select": "",
+    "pid": {
+        "frame-id": "a",
+        "page-no": 0
+    },
+    "redirect": {
+        "frame-id": "a",
+        "page-no": 9
+    },
+    "response-data": {
+        "response-action": {
+            "args": null,
+            "exec": "",
+            "post-action-frame": {
+                "frame-id": "",
+                "page-no": 0
+            },
+            "post-cancel-frame": {
+                "frame-id": "",
+                "page-no": 0
+            }
+        },
+        "response-fields": null
+    },
+    "routing-table": null,
+    "title": {
+        "data": "",
+        "merge-data": null,
+        "type": ""
+    },
+    "visible": true
+}
