@@ -82,6 +82,7 @@ services:
       - odbc.ini
       - password_emf-alrm
       - password_emf-alarm
+      - password_emf-hydra
 networks:
   telstar-network:
 volumes:
@@ -97,3 +98,5 @@ secrets:
     file: secrets/password_emf-alrm
   password_emf-alarm:
     file: secrets/password_emf-alarm
+  password_emf-hydra:
+    file: secrets/password_emf-hydra

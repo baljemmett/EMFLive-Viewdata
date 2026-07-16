@@ -18,6 +18,9 @@ my $callback_extension = "hydration";
 my $workdir = "/var/spool/asterisk/tmp";
 my $spooldir = "/var/spool/asterisk/outgoing";
 
+# Really horrible bodge to get around pgpass permissions check in container
+-f "/run/secrets/pgpass" && system("cp -u /run/secrets/pgpass ~/.pgpass; chmod 0400 ~/.pgpass");
+
 # Connect to our database first of all, otherwise there's nothing we can do!
 my $db = DBI->connect("dbi:Pg:service=emf_reminders", '', '', {AutoCommit => 1, PrintError => 0, RaiseError => 0});
 die "Failed to connect to database: $DBI::errstr" unless $db;
