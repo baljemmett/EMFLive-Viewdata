@@ -74,6 +74,11 @@ for my $player (@{$leaderboard->{playerStats}})
     $frame->add_line($line);
 }
 
+for (my $i = @{$leaderboard->{playerStats}}; $i < 10; $i++)
+{
+    $frame->add_line("");
+}
+
 $frame->add_line("[b][m.]");
 
 my $now = time();
